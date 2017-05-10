@@ -5,10 +5,15 @@ plugins {
 apply plugin: 'java'
 apply plugin: 'eclipse'
 
+repositories {
+	mavenCentral()
+}
+
 sourceSets {
 	main {
 		java {
 			srcDir compileJavacc.outputDirectory
+			srcDir compileJjtree.outputDirectory
 		}
 	}
 }

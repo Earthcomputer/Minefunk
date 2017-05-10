@@ -1,0 +1,133 @@
+options
+{
+  STATIC = false;
+  NODE_DEFAULT_VOID = true;
+  MULTI = true;
+  VISITOR = true;
+}
+
+PARSER_BEGIN(MinefunkParser)
+package net.earthcomputer.minefunk.parser;
+
+public class MinefunkParser
+{
+}
+
+PARSER_END(MinefunkParser)
+
+// !!!!!!!!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// WHENEVER YOU MODIFY THIS LIST OF TOKENS, DON'T FORGET TO MODIFY NONWHITESPACE() BELOW
+TOKEN :
+{
+  < EXEC : "exec" >
+| < NEWLINE :
+    "\r\n"
+  | "\n" >
+| < IDENTIFIER :
+    (
+      "_"
+    | < LETTER >
+    )
+    (
+      "_"
+    | < ALPHANUM >
+    )* >
+| < NONWHITESPACE : [ "!"-"~" ] >
+}
+
+// !!!!!!!!!!!!!!!!!! VERY IMPORTANT MESSAGE ABOVE !!!!!!!!!!!!!!!!!!
+TOKEN :
+{
+  < #DIGIT : [ "0"-"9" ] >
+| < #LETTER : [ "a"-"z", "A"-"Z" ] >
+| < #ALPHANUM :
+    < DIGIT >
+  | < LETTER > >
+}
+
+SKIP :
+{
+  " "
+| "\t"
+| "...\r\n"
+| "...\n"
+}
+
+public String nonWhiteSpace() :
+{
+  Token t;
+}
+{
+  (
+    t = < EXEC >
+  | t = < IDENTIFIER >
+  | t = < NONWHITESPACE >
+  )
+  {
+    return t.image;
+  }
+}
+
+public ASTRoot parse() #Root :
+{
+}
+{
+  (
+    statement()
+  )*
+  < EOF >
+  {
+    return jjtThis;
+  }
+}
+
+public void statement() :
+{
+}
+{
+  execStatement()
+}
+
+public void execStatement() #Exec :
+{
+  String cmd;
+}
+{
+  < EXEC > 
+  cmd = command()
+  {
+    jjtThis.value = cmd;
+  }
+}
+
+public String command() :
+{
+  String word;
+  StringBuilder command = new StringBuilder();
+}
+{
+  (
+    word = nonWhiteSpace()
+    {
+      command.append(word);
+    }
+  )+
+  (
+    < NEWLINE >
+  | < EOF >
+  )
+  {
+    return command.toString();
+  }
+}
+
+public void identifier() #Identifier :
+{
+  Token t;
+}
+{
+  t = < IDENTIFIER >
+  {
+    jjtThis.value = t.image;
+  }
+}
