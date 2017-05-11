@@ -21,6 +21,15 @@ TOKEN :
   < NAMESPACE : "namespace" >
 | < STATIC : "static" >
 | < INLINE : "inline" >
+| < TRUE : "true" >
+| < FALSE : "false" >
+| < INTLITERAL :
+    (
+      < PLUS >
+    | < MINUS >
+    )?
+    (< DIGIT >)+ >
+| < STRING_START : "\"" > : STATE_STRING_LITERAL
 | < IDENTIFIER :
     (
       "_"
@@ -30,6 +39,10 @@ TOKEN :
       "_"
     | < ALPHANUM >
     )* >
+| < PLUS : "+" >
+| < MINUS : "-" >
+| < MULTIPLY : "*" >
+| < DIVIDE : "/" >
 | < OPEN_BRACE : "{" >
 | < CLOSE_BRACE : "}" >
 | < DOUBLE_COLON : "::" >
@@ -47,6 +60,18 @@ TOKEN :
 | < #ALPHANUM :
     < DIGIT >
   | < LETTER > >
+}
+
+< STATE_STRING_LITERAL >
+TOKEN :
+{
+  < STRING_BODY :
+    (
+      ~[ "\"", "\\" ]
+    | "\\\\"
+    | "\\\""
+    )+ >
+| < STRING_END : "\"" > : DEFAULT
 }
 
 < STATE_COMMAND >
@@ -169,7 +194,12 @@ public void statement() :
     < SEMICOLON >
   | blockStatement()
   | commandStatement()
-  | varDeclStatement()
+  |
+    (
+      LOOKAHEAD(varDeclStatement())
+      varDeclStatement()
+    | expressionStatement()
+    )
   )
 }
 
@@ -187,7 +217,6 @@ public void blockStatement() #BlockStmt :
 public void commandStatement() #CommandStmt :
 {
   Token t;
-  StringBuilder cmd = new StringBuilder();
 }
 {
   < START_COMMAND > 
@@ -205,6 +234,98 @@ public void varDeclStatement() #VarDeclStmt :
   modifiers() 
   type() 
   identifier()
+}
+
+public void expressionStatement() #ExpressionStmt :
+{
+}
+{
+  expression()
+}
+
+public void expression() :
+{
+}
+{
+  (
+    LOOKAHEAD(functionCallExpression())
+    functionCallExpression()
+  | variableAccessExpression()
+  )
+| booleanLiteralExpression()
+| integerLiteralExpression()
+| stringLiteralExpression()
+}
+
+public void functionCallExpression() #FunctionCallExpr :
+{
+}
+{
+  type() 
+  < OPEN_PARENTHESIS >
+  (
+    expression()
+    (
+      < COMMA > 
+      expression()
+    )*
+  )?
+  < CLOSE_PARENTHESIS >
+}
+
+public void variableAccessExpression() #VarAccessExpr :
+{
+}
+{
+  type()
+}
+
+public void booleanLiteralExpression() #BoolLiteralExpr :
+{
+}
+{
+  < TRUE >
+  {
+    jjtThis.value = Boolean.TRUE;
+  }
+| < FALSE >
+  {
+    jjtThis.value = Boolean.FALSE;
+  }
+}
+
+public void integerLiteralExpression() #IntLiteralExpr :
+{
+  Token t;
+}
+{
+  t = < INTLITERAL >
+  {
+    try
+    {
+      jjtThis.value = Integer.parseInt(t.image);
+    }
+    catch (NumberFormatException e)
+    {
+      // Possible if > Integer.MAX_VALUE or < Integer.MIN_VALUE
+      throw new ParseException("Integer is out of bounds");
+    }
+  }
+}
+
+public void stringLiteralExpression() #StringLiteralExpr :
+{
+  Token t = null;
+}
+{
+  < STRING_START > 
+  (
+  t = < STRING_BODY >
+  )?
+  {
+    jjtThis.value = t == null ? "" : t.image;
+  }
+  < STRING_END >
 }
 
 public void identifier() #Identifier :
