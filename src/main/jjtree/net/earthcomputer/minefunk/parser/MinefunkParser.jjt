@@ -19,8 +19,10 @@ PARSER_END(MinefunkParser)
 TOKEN :
 {
   < NAMESPACE : "namespace" >
+| < TYPEDEF : "typedef" >
 | < STATIC : "static" >
 | < INLINE : "inline" >
+| < CONST : "const" >
 | < TRUE : "true" >
 | < FALSE : "false" >
 | < INTLITERAL :
@@ -30,7 +32,7 @@ TOKEN :
     )?
     (< DIGIT >)+ >
 | < STRING_START : "\"" > : STATE_STRING_LITERAL
-| < IDENTIFIER :
+| < WORD :
     (
       "_"
     | < LETTER >
@@ -43,6 +45,7 @@ TOKEN :
 | < MINUS : "-" >
 | < MULTIPLY : "*" >
 | < DIVIDE : "/" >
+| < MOD : "%" >
 | < OPEN_BRACE : "{" >
 | < CLOSE_BRACE : "}" >
 | < DOUBLE_COLON : "::" >
@@ -50,6 +53,13 @@ TOKEN :
 | < OPEN_PARENTHESIS : "(" >
 | < CLOSE_PARENTHESIS : ")" >
 | < SEMICOLON : ";" >
+| < ASSIGN : "=" >
+| < ASSIGN_PLUS : "+=" >
+| < ASSIGN_MINUS : "-=" >
+| < ASSIGN_MULTIPLY : "*=" >
+| < ASSIGN_DIVIDE : "/=" >
+| < ASSIGN_MOD : "%=" >
+| < ASSIGN_SWAP : "><" >
 | < START_COMMAND : "$" > : STATE_COMMAND
 }
 
@@ -157,7 +167,19 @@ public void member() :
 {
 }
 {
-  function()
+  (
+    LOOKAHEAD(function())
+    function()
+  | varDeclStatement()
+  )
+}
+
+public void typedef() #TypeDef :
+{
+}
+{
+  < TYPEDEF > 
+  identifier()
 }
 
 public void function() #Function :
@@ -234,6 +256,10 @@ public void varDeclStatement() #VarDeclStmt :
   modifiers() 
   type() 
   identifier()
+  (
+    < ASSIGN > 
+    expression()
+  )?
 }
 
 public void expressionStatement() #ExpressionStmt :
@@ -259,9 +285,22 @@ public void expression() :
 
 public void functionCallExpression() #FunctionCallExpr :
 {
+  Token t;
+  List < String > namespaces = new ArrayList < String > ();
 }
 {
-  type() 
+  (
+    LOOKAHEAD(2)
+    t = < WORD >
+    {
+      namespaces.add(t.image);
+    }
+    < DOUBLE_COLON >
+  )*
+  t = < WORD >
+  {
+    jjtThis.value = new Type(namespaces, t.image);
+  }
   < OPEN_PARENTHESIS >
   (
     expression()
@@ -333,7 +372,7 @@ public void identifier() #Identifier :
   Token t;
 }
 {
-  t = < IDENTIFIER >
+  t = < WORD >
   {
     jjtThis.value = t.image;
   }
@@ -361,7 +400,18 @@ public void modifiers() #Modifiers :
       }
       modifiers |= Modifiers.INLINE;
     }
+  | < CONST >
+    {
+      if ((modifiers & Modifiers.CONST) != 0)
+      {
+        throw new ParseException("Duplicate modifier \"const\"");
+      }
+      modifiers |= Modifiers.CONST;
+    }
   )*
+  {
+    jjtThis.value = modifiers;
+  }
 }
 
 public void type() #Type :
@@ -372,13 +422,13 @@ public void type() #Type :
 {
   (
     LOOKAHEAD(2)
-    t = < IDENTIFIER >
+    t = < WORD >
     {
       namespaces.add(t.image);
     }
     < DOUBLE_COLON >
   )*
-  t = < IDENTIFIER >
+  t = < WORD >
   {
     jjtThis.value = new Type(namespaces, t.image);
   }
