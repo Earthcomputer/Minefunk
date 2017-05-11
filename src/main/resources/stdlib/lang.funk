@@ -1,0 +1,19 @@
+
+namespace std {
+	
+	/**
+	 * Removes, for all intents an purposes, the maxCommandChainLength limit.
+	 */
+	inline void removeCommandChainLimit() {
+		$gamerule maxCommandChainLength 2147483647
+	}
+	
+	/**
+	 * Turns command output on/off
+	 */
+	inline void echo(static bool on) {
+		$gamerule commandBlockOutput %on%
+		$gamerule logAdminCommands %on%
+	}
+	
+}

@@ -8,6 +8,7 @@ options
 
 PARSER_BEGIN(MinefunkParser)
 package net.earthcomputer.minefunk.parser;
+import java.util.*;
 
 public class MinefunkParser
 {
@@ -15,14 +16,11 @@ public class MinefunkParser
 
 PARSER_END(MinefunkParser)
 
-// !!!!!!!!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// WHENEVER YOU MODIFY THIS LIST OF TOKENS, DON'T FORGET TO MODIFY NONWHITESPACE() BELOW
 TOKEN :
 {
-  < EXEC : "exec" >
-| < NEWLINE :
-    "\r\n"
-  | "\n" >
+  < NAMESPACE : "namespace" >
+| < STATIC : "static" >
+| < INLINE : "inline" >
 | < IDENTIFIER :
     (
       "_"
@@ -32,10 +30,16 @@ TOKEN :
       "_"
     | < ALPHANUM >
     )* >
-| < NONWHITESPACE : [ "!"-"~" ] >
+| < OPEN_BRACE : "{" >
+| < CLOSE_BRACE : "}" >
+| < DOUBLE_COLON : "::" >
+| < COMMA : "," >
+| < OPEN_PARENTHESIS : "(" >
+| < CLOSE_PARENTHESIS : ")" >
+| < SEMICOLON : ";" >
+| < START_COMMAND : "$" > : STATE_COMMAND
 }
 
-// !!!!!!!!!!!!!!!!!! VERY IMPORTANT MESSAGE ABOVE !!!!!!!!!!!!!!!!!!
 TOKEN :
 {
   < #DIGIT : [ "0"-"9" ] >
@@ -45,27 +49,57 @@ TOKEN :
   | < LETTER > >
 }
 
+< STATE_COMMAND >
+TOKEN :
+{
+  < COMMAND_BODY :
+    (
+      ~[ "\r", "\n" ]
+    | ("\r" ~[ "\n" ])
+    )+ >
+| < END_COMMAND :
+    (
+      "\r\n"
+    | "\n"
+    ) >
+  : DEFAULT
+}
+
 SKIP :
 {
   " "
 | "\t"
-| "...\r\n"
-| "...\n"
+| "\r\n"
+| "\n"
+| < LINE_COMMENT : "//" > : STATE_LINE_COMMENT
+| < MULTILINE_COMMENT : "/*" > : STATE_MULTILINE_COMMENT
 }
 
-public String nonWhiteSpace() :
+< STATE_LINE_COMMENT >
+SKIP :
 {
-  Token t;
+  < LINE_COMMENT_BODY :
+    (
+      ~[ "\r", "\n" ]
+    | ("\r" ~[ "\n" ])
+    )+ >
+| < END_LINE_COMMENT :
+    (
+      "\r\n"
+    | "\n"
+    ) >
+  : DEFAULT
 }
+
+< STATE_MULTILINE_COMMENT >
+SKIP :
 {
-  (
-    t = < EXEC >
-  | t = < IDENTIFIER >
-  | t = < NONWHITESPACE >
-  )
-  {
-    return t.image;
-  }
+  < MULTILINE_COMMENT_BODY :
+    (
+      ~[ "*" ]
+    | ("*" ~[ "/" ])
+    )+ >
+| < END_MULTILINE_COMMENT : "*/" > : DEFAULT
 }
 
 public ASTRoot parse() #Root :
@@ -73,7 +107,7 @@ public ASTRoot parse() #Root :
 }
 {
   (
-    statement()
+    namespace()
   )*
   < EOF >
   {
@@ -81,44 +115,96 @@ public ASTRoot parse() #Root :
   }
 }
 
+public void namespace() #Namespace :
+{
+}
+{
+  < NAMESPACE > 
+  identifier() 
+  < OPEN_BRACE >
+  (
+    member()
+  )*
+  < CLOSE_BRACE >
+}
+
+public void member() :
+{
+}
+{
+  function()
+}
+
+public void function() #Function :
+{
+}
+{
+  modifiers() 
+  type() 
+  identifier() 
+  < OPEN_PARENTHESIS > 
+  paramList() 
+  < CLOSE_PARENTHESIS > 
+  blockStatement()
+}
+
+public void paramList() #ParamList :
+{
+}
+{
+  (
+    varDeclStatement()
+    (
+      < COMMA > 
+      varDeclStatement()
+    )*
+  )?
+}
+
 public void statement() :
 {
 }
 {
-  execStatement()
-}
-
-public void execStatement() #Exec :
-{
-  String cmd;
-}
-{
-  < EXEC > 
-  cmd = command()
-  {
-    jjtThis.value = cmd;
-  }
-}
-
-public String command() :
-{
-  String word;
-  StringBuilder command = new StringBuilder();
-}
-{
   (
-    word = nonWhiteSpace()
-    {
-      command.append(word);
-    }
-  )+
-  (
-    < NEWLINE >
-  | < EOF >
+    < SEMICOLON >
+  | blockStatement()
+  | commandStatement()
+  | varDeclStatement()
   )
+}
+
+public void blockStatement() #BlockStmt :
+{
+}
+{
+  < OPEN_BRACE >
+  (
+    statement()
+  )*
+  < CLOSE_BRACE >
+}
+
+public void commandStatement() #CommandStmt :
+{
+  Token t;
+  StringBuilder cmd = new StringBuilder();
+}
+{
+  < START_COMMAND > 
+  t = < COMMAND_BODY >
   {
-    return command.toString();
+    jjtThis.value = t.image;
   }
+  < END_COMMAND >
+}
+
+public void varDeclStatement() #VarDeclStmt :
+{
+}
+{
+  modifiers() 
+  type() 
+  identifier()
 }
 
 public void identifier() #Identifier :
@@ -129,5 +215,50 @@ public void identifier() #Identifier :
   t = < IDENTIFIER >
   {
     jjtThis.value = t.image;
+  }
+}
+
+public void modifiers() #Modifiers :
+{
+  int modifiers = 0;
+}
+{
+  (
+    < STATIC >
+    {
+      if ((modifiers & Modifiers.STATIC) != 0)
+      {
+        throw new ParseException("Duplicate modifier \"static\"");
+      }
+      modifiers |= Modifiers.STATIC;
+    }
+  | < INLINE >
+    {
+      if ((modifiers & Modifiers.INLINE) != 0)
+      {
+        throw new ParseException("Duplicate modifier \"inline\"");
+      }
+      modifiers |= Modifiers.INLINE;
+    }
+  )*
+}
+
+public void type() #Type :
+{
+  Token t;
+  List < String > namespaces = new ArrayList < String > ();
+}
+{
+  (
+    LOOKAHEAD(2)
+    t = < IDENTIFIER >
+    {
+      namespaces.add(t.image);
+    }
+    < DOUBLE_COLON >
+  )*
+  t = < IDENTIFIER >
+  {
+    jjtThis.value = new Type(namespaces, t.image);
   }
 }
