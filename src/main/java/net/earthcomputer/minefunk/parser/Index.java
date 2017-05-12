@@ -113,9 +113,6 @@ public class Index {
 	}
 
 	private Type resolve(Type type, Map<Type, ?> map) {
-		if (type.getNamespaces().isEmpty() && map.containsKey(type)) {
-			return type;
-		}
 		List<String> namespaces = new ArrayList<>(this.namespaces);
 		int idx = namespaces.size() - 1;
 		namespaces.addAll(type.getNamespaces());
@@ -125,6 +122,9 @@ public class Index {
 				return tmpType;
 			}
 			namespaces.remove(idx--);
+		}
+		if (map.containsKey(type)) {
+			return type;
 		}
 		return null;
 	}
@@ -152,11 +152,10 @@ public class Index {
 			}
 			namespaces.remove(idx--);
 		}
-		if (funcId.type.getNamespaces().isEmpty()) {
-			namespaces.clear();
-			if (functions.containsKey(tmpFuncId)) {
-				return tmpFuncId;
-			}
+		namespaces.clear();
+		namespaces.addAll(funcId.type.getNamespaces());
+		if (functions.containsKey(tmpFuncId)) {
+			return tmpFuncId;
 		}
 		return null;
 	}
