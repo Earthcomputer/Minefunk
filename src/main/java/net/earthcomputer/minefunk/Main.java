@@ -32,6 +32,11 @@ public class Main {
 		if (handleExceptions(exceptions)) {
 			return;
 		}
+		
+		ASTValidator.postIndexCheck(root, index, exceptions);
+		if (handleExceptions(exceptions)) {
+			return;
+		}
 	}
 	
 	private static boolean handleExceptions(List<ParseException> exceptions) {

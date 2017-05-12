@@ -36,7 +36,7 @@ public class PreIndexVisitor extends MinefunkParserDefaultVisitor implements Min
 				addException(data, new ParseException("Non-inline functions with parameters are not supported yet"));
 			}
 		}
-		if (!getReturnType(node).equals(new Type("void"))) {
+		if (!getReturnType(node).isVoid()) {
 			addException(data, new ParseException("Non-void functions are not supported yet"));
 		}
 		modifiers &= ~ALLOWED_FUNCTION_MODIFIERS;

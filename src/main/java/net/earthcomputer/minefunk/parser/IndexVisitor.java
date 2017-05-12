@@ -29,7 +29,11 @@ public class IndexVisitor extends MinefunkParserDefaultVisitor {
 	@Override
 	public Object visit(ASTFunction node, Object data) {
 		((Data) data).index.addFunctionDefinition(node, ((Data) data).exceptions);
-		return super.visit(node, data);
+		// Start block to avoid making parameters fields
+		((Data) data).index.pushBlock();
+		super.visit(node, data);
+		((Data) data).index.popBlock();
+		return data;
 	}
 
 	@Override

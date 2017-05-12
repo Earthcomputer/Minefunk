@@ -5,6 +5,11 @@ import java.util.List;
 
 public class Type {
 
+	public static final Type BOOL = new Type("bool");
+	public static final Type INT = new Type("int");
+	public static final Type STRING = new Type("string");
+	public static final Type VOID = new Type("void");
+
 	private List<String> namespaces;
 	private String typeName;
 
@@ -23,6 +28,22 @@ public class Type {
 
 	public String getTypeName() {
 		return typeName;
+	}
+
+	public boolean isBool() {
+		return namespaces.isEmpty() && "bool".equals(typeName);
+	}
+	
+	public boolean isInt() {
+		return namespaces.isEmpty() && "int".equals(typeName);
+	}
+	
+	public boolean isString() {
+		return namespaces.isEmpty() && "string".equals(typeName);
+	}
+	
+	public boolean isVoid() {
+		return namespaces.isEmpty() && "void".equals(typeName);
 	}
 
 	@Override

@@ -22,9 +22,10 @@ public class Index {
 	}
 
 	private void addBuiltinTypes() {
-		types.put(new Type("bool"), new BoolDef());
-		types.put(new Type("int"), new IntDef());
-		types.put(new Type("string"), new StringDef());
+		types.put(Type.BOOL, new BoolDef());
+		types.put(Type.INT, new IntDef());
+		types.put(Type.STRING, new StringDef());
+		types.put(Type.VOID, new VoidDef());
 	}
 
 	public void addTypeDefinition(ASTTypeDef typeDef, List<ParseException> exceptions) {

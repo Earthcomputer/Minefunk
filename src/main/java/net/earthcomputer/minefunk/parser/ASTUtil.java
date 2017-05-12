@@ -45,7 +45,7 @@ public class ASTUtil {
 	}
 
 	public static Node[] getArguments(ASTFunctionCallExpr expr) {
-		return expr.children;
+		return expr.children == null ? new Node[0] : expr.children;
 	}
 
 	public static String getValue(ASTIdentifier id) {

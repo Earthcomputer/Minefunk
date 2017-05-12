@@ -19,4 +19,8 @@ namespace std {
 		$gamerule logAdminCommands %on%
 	}
 	
+	inline void print(const string str) {
+		$tellraw @a %str%
+	}
+	
 }

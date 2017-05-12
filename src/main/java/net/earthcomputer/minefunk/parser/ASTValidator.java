@@ -12,4 +12,8 @@ public class ASTValidator {
 		root.jjtAccept(new IndexVisitor(), new IndexVisitor.Data(index, exceptions));
 	}
 
+	public static void postIndexCheck(ASTRoot root, Index index, List<ParseException> exceptions) {
+		root.jjtAccept(new PostIndexVisitor(), new IndexVisitor.Data(index, exceptions));
+	}
+
 }
