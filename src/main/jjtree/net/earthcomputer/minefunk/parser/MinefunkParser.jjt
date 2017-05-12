@@ -20,7 +20,6 @@ TOKEN :
 {
   < NAMESPACE : "namespace" >
 | < TYPEDEF : "typedef" >
-| < STATIC : "static" >
 | < INLINE : "inline" >
 | < CONST : "const" >
 | < TRUE : "true" >
@@ -384,15 +383,7 @@ public void modifiers() #Modifiers :
 }
 {
   (
-    < STATIC >
-    {
-      if ((modifiers & Modifiers.STATIC) != 0)
-      {
-        throw new ParseException("Duplicate modifier \"static\"");
-      }
-      modifiers |= Modifiers.STATIC;
-    }
-  | < INLINE >
+    < INLINE >
     {
       if ((modifiers & Modifiers.INLINE) != 0)
       {

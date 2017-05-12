@@ -31,6 +31,14 @@ public class PreIndexVisitor extends MinefunkParserDefaultVisitor implements Min
 	@Override
 	public Object visit(ASTFunction node, Object data) {
 		int modifiers = getModifiers(node);
+		if ((modifiers & Modifiers.INLINE) == 0) {
+			if (getParameters(node).length != 0) {
+				addException(data, new ParseException("Non-inline functions with parameters are not supported yet"));
+			}
+		}
+		if (!getReturnType(node).equals(new Type("void"))) {
+			addException(data, new ParseException("Non-void functions are not supported yet"));
+		}
 		modifiers &= ~ALLOWED_FUNCTION_MODIFIERS;
 		if (modifiers != 0) {
 			addException(data, new ParseException("Invalid modifiers on function"));
@@ -38,11 +46,14 @@ public class PreIndexVisitor extends MinefunkParserDefaultVisitor implements Min
 		return super.visit(node, data);
 	}
 
-	private static final int ALLOWED_VARIABLE_MODIFIERS = Modifiers.STATIC | Modifiers.CONST;
+	private static final int ALLOWED_VARIABLE_MODIFIERS = Modifiers.CONST;
 
 	@Override
 	public Object visit(ASTVarDeclStmt node, Object data) {
 		int modifiers = getModifiers(node);
+		if ((modifiers & Modifiers.CONST) == 0) {
+			addException(data, new ParseException("Non-const variables not supported yet"));
+		}
 		modifiers &= ~ALLOWED_VARIABLE_MODIFIERS;
 		if (modifiers != 0) {
 			addException(data, new ParseException("Invalid modifiers on function"));

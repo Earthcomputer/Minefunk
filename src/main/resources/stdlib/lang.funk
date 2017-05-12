@@ -1,17 +1,20 @@
 
 namespace std {
 	
+	const int MAX_INT = 2147483647
+	const int MIN_INT = -2147483648
+	
 	/**
 	 * Removes, for all intents an purposes, the maxCommandChainLength limit.
 	 */
 	inline void removeCommandChainLimit() {
-		$gamerule maxCommandChainLength 2147483647
+		$gamerule maxCommandChainLength %MAX_INT%
 	}
 	
 	/**
 	 * Turns command output on/off
 	 */
-	inline void echo(static bool on) {
+	inline void echo(const bool on) {
 		$gamerule commandBlockOutput %on%
 		$gamerule logAdminCommands %on%
 	}
