@@ -1,12 +1,15 @@
 package net.earthcomputer.minefunk.parser;
 
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import net.earthcomputer.minefunk.Util;
 
 public class Index {
 
@@ -14,11 +17,15 @@ public class Index {
 	private Map<Type, ASTVarDeclStmt> fields = new HashMap<>();
 	private Map<FunctionId, ASTFunction> functions = new HashMap<>();
 	private Map<FunctionId, ASTFunction> functionsToResolve = new HashMap<>();
-	private List<String> namespaces = new ArrayList<>();
-	private Deque<Map<String, ASTVarDeclStmt>> localVariables = new ArrayDeque<>();
+	private Deque<Frame> frames = new ArrayDeque<>();
+	private Map<ASTVarDeclStmt, ExtFieldData> extFieldData = new IdentityHashMap<>();
+	private Map<ASTFunction, ExtFunctionData> extFunctionData = new IdentityHashMap<>();
+	private int nextFunctionId = 0;
 
 	public Index() {
 		addBuiltinTypes();
+		// Root frame
+		pushFrame(new ArrayDeque<>());
 	}
 
 	private void addBuiltinTypes() {
@@ -29,7 +36,7 @@ public class Index {
 	}
 
 	public void addTypeDefinition(ASTTypeDef typeDef, List<ParseException> exceptions) {
-		Type type = new Type(new ArrayList<>(namespaces), ASTUtil.getName(typeDef));
+		Type type = new Type(frames.peek().getNamespacesList(), ASTUtil.getName(typeDef));
 		if (types.containsKey(type)) {
 			exceptions.add(new ParseException("Duplicate type declared: " + type));
 		} else {
@@ -38,11 +45,12 @@ public class Index {
 	}
 
 	public void addFieldDefinition(ASTVarDeclStmt fieldDecl, List<ParseException> exceptions) {
-		Type field = new Type(new ArrayList<>(namespaces), ASTUtil.getName(fieldDecl));
+		Type field = new Type(frames.peek().getNamespacesList(), ASTUtil.getName(fieldDecl));
 		if (fields.containsKey(field)) {
 			exceptions.add(new ParseException("Duplicate field declared: " + field));
 		} else {
 			fields.put(field, fieldDecl);
+			extFieldData.put(fieldDecl, new ExtFieldData(field.getNamespaces()));
 		}
 	}
 
@@ -52,7 +60,7 @@ public class Index {
 		for (int i = 0; i < rawParams.length; i++) {
 			params[i] = ASTUtil.getType(rawParams[i]);
 		}
-		FunctionId funcId = new FunctionId(new Type(new ArrayList<>(namespaces), ASTUtil.getName(func)), params);
+		FunctionId funcId = new FunctionId(new Type(frames.peek().getNamespacesList(), ASTUtil.getName(func)), params);
 		if (functionsToResolve.containsKey(funcId)) {
 			exceptions.add(new ParseException("Duplicate function declared: " + funcId));
 		} else {
@@ -60,43 +68,13 @@ public class Index {
 		}
 	}
 
-	public void pushNamespace(ASTNamespace namespace) {
-		namespaces.add(ASTUtil.getName(namespace));
-	}
-
-	public void popNamespace() {
-		namespaces.remove(namespaces.size() - 1);
-	}
-
-	public void pushBlock() {
-		localVariables.push(new HashMap<>());
-	}
-
-	public void popBlock() {
-		localVariables.pop();
-	}
-
-	public boolean isInBlock() {
-		return !localVariables.isEmpty();
-	}
-
-	public void addLocalVariableDeclaration(ASTVarDeclStmt varDecl, List<ParseException> exceptions) {
-		String name = ASTUtil.getName(varDecl);
-		if (localVariables.peek().containsKey(name)) {
-			exceptions.add(new ParseException("Duplicate local variable: " + name));
-		} else {
-			localVariables.peek().put(ASTUtil.getName(varDecl), varDecl);
-		}
-	}
-
 	public void resolvePendingFunctions(List<ParseException> exceptions) {
 		functionsToResolve.forEach((funcId, func) -> {
-			List<String> prevNamespaces = this.namespaces;
-			this.namespaces = new ArrayList<>(funcId.type.getNamespaces());
+			pushFrame(Util.listToDeque(funcId.type.getNamespaces()));
 			Type[] resolvedParams = new Type[funcId.paramTypes.length];
 			boolean errored = false;
 			for (int i = 0; i < resolvedParams.length; i++) {
-				Type resolvedParam = resolveType(funcId.paramTypes[i]);
+				Type resolvedParam = getFrame().resolveType(funcId.paramTypes[i]);
 				if (resolvedParam == null) {
 					errored = true;
 					exceptions.add(new ParseException("Could not resolve " + funcId.paramTypes[i]));
@@ -106,89 +84,73 @@ public class Index {
 			}
 			if (!errored) {
 				functions.put(new FunctionId(funcId.type, resolvedParams), func);
+				extFunctionData.put(func, new ExtFunctionData(funcId.type.getNamespaces()));
 			}
-			this.namespaces = prevNamespaces;
+			popFrame();
 		});
 		functionsToResolve.clear();
 	}
 
-	private Type resolve(Type type, Map<Type, ?> map) {
-		List<String> namespaces = new ArrayList<>(this.namespaces);
-		int idx = namespaces.size() - 1;
-		namespaces.addAll(type.getNamespaces());
-		Type tmpType = new Type(namespaces, type.getTypeName());
-		while (idx >= 0) {
-			if (map.containsKey(tmpType)) {
-				return tmpType;
-			}
-			namespaces.remove(idx--);
-		}
-		if (map.containsKey(type)) {
-			return type;
-		}
-		return null;
+	public void pushFrame(Deque<String> namespaces) {
+		frames.push(new Frame(this, namespaces, new ArrayDeque<>()));
 	}
 
-	public Type resolveType(Type type) {
-		return resolve(type, types);
+	public Frame getFrame() {
+		return frames.peek();
 	}
 
-	public Type resolveField(Type field) {
-		return resolve(field, fields);
-	}
-
-	public FunctionId resolveFunction(FunctionId funcId) {
-		Type[] params = new Type[funcId.paramTypes.length];
-		for (int i = 0; i < params.length; i++) {
-			params[i] = resolveType(funcId.paramTypes[i]);
-		}
-		List<String> namespaces = new ArrayList<>(this.namespaces);
-		int idx = namespaces.size() - 1;
-		namespaces.addAll(funcId.type.getNamespaces());
-		FunctionId tmpFuncId = new FunctionId(new Type(namespaces, funcId.type.getTypeName()), params);
-		while (idx >= 0) {
-			if (functions.containsKey(tmpFuncId)) {
-				return tmpFuncId;
-			}
-			namespaces.remove(idx--);
-		}
-		namespaces.clear();
-		namespaces.addAll(funcId.type.getNamespaces());
-		if (functions.containsKey(tmpFuncId)) {
-			return tmpFuncId;
-		}
-		return null;
-	}
-
-	public ASTTypeDef getTypeDefinition(Type typeName) {
-		return types.get(resolveType(typeName));
+	public void popFrame() {
+		frames.pop();
 	}
 
 	public ASTTypeDef getTypeDefintionNoContext(Type typeName) {
 		return types.get(typeName);
 	}
 
-	public ASTVarDeclStmt getVariableDeclaration(Type variableName) {
-		if (variableName.getNamespaces().isEmpty()) {
-			for (Map<String, ASTVarDeclStmt> frame : localVariables) {
-				if (frame.containsKey(variableName.getTypeName())) {
-					return frame.get(variableName.getTypeName());
-				}
-			}
-		}
-		return fields.get(resolveField(variableName));
-	}
-
 	public ASTVarDeclStmt getFieldDefinitionNoContext(Type fieldName) {
 		return fields.get(fieldName);
 	}
 
-	public ASTFunction getFunctionDefinition(Type type, Type... paramTypes) {
-		return functions.get(resolveFunction(new FunctionId(type, paramTypes)));
+	public ASTFunction getFunctionDefinitionNoContext(FunctionId funcId) {
+		return functions.get(funcId);
 	}
 
 	public ASTFunction getFunctionDefinitionNoContext(Type type, Type... paramTypes) {
 		return functions.get(new FunctionId(type, paramTypes));
+	}
+
+	public boolean isField(ASTVarDeclStmt varDecl) {
+		return fields.containsValue(varDecl);
+	}
+
+	public String getFunctionId(ASTFunction function) {
+		ExtFunctionData extData = extFunctionData.get(function);
+		if (extData.getId() == null) {
+			StringBuilder newName = new StringBuilder();
+			Iterator<String> nsItr = extData.getNamespaces().iterator();
+			if (nsItr.hasNext()) {
+				newName.append(nsItr.next()).append(":");
+				while (nsItr.hasNext()) {
+					newName.append(nsItr.next()).append("/");
+				}
+			}
+			boolean noarg = ASTUtil.getParameters(function).length == 0;
+			if (noarg) {
+				newName.append(ASTUtil.getName(function));
+			} else {
+				newName.append("0funk").append(nextFunctionId++);
+			}
+			extData.setId(newName.toString());
+		}
+		return extData.getId();
+	}
+
+	public ExtFieldData getExtFieldData(ASTVarDeclStmt field) {
+		return extFieldData.get(field);
+	}
+
+	public ExtFunctionData getExtFunctionData(ASTFunction func) {
+		return extFunctionData.get(func);
 	}
 
 	public static class FunctionId {
@@ -198,6 +160,14 @@ public class Index {
 		public FunctionId(Type type, Type[] paramTypes) {
 			this.type = type;
 			this.paramTypes = paramTypes;
+		}
+
+		public Type getName() {
+			return type;
+		}
+
+		public Type[] getParameters() {
+			return paramTypes;
 		}
 
 		@Override

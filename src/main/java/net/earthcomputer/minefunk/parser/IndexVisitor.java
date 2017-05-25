@@ -2,56 +2,52 @@ package net.earthcomputer.minefunk.parser;
 
 import java.util.List;
 
-public class IndexVisitor extends MinefunkParserDefaultVisitor {
+public abstract class IndexVisitor extends MinefunkParserDefaultVisitor {
 
 	@Override
 	public Object visit(ASTNamespace node, Object data) {
-		((Data) data).index.pushNamespace(node);
+		getIndex(data).getFrame().pushNamespace(node);
 		super.visit(node, data);
-		((Data) data).index.popNamespace();
+		getIndex(data).getFrame().popNamespace();
+		return data;
+	}
+
+	@Override
+	public Object visit(ASTFunction node, Object data) {
+		getIndex(data).getFrame().pushBlock();
+		super.visit(node, data);
+		getIndex(data).getFrame().popBlock();
 		return data;
 	}
 
 	@Override
 	public Object visit(ASTBlockStmt node, Object data) {
-		((Data) data).index.pushBlock();
+		getIndex(data).getFrame().pushBlock();
 		super.visit(node, data);
-		((Data) data).index.popBlock();
-		return data;
-	}
-
-	@Override
-	public Object visit(ASTTypeDef node, Object data) {
-		((Data) data).index.addTypeDefinition(node, ((Data) data).exceptions);
-		return super.visit(node, data);
-	}
-
-	@Override
-	public Object visit(ASTFunction node, Object data) {
-		((Data) data).index.addFunctionDefinition(node, ((Data) data).exceptions);
-		// Start block to avoid making parameters fields
-		((Data) data).index.pushBlock();
-		super.visit(node, data);
-		((Data) data).index.popBlock();
+		getIndex(data).getFrame().popBlock();
 		return data;
 	}
 
 	@Override
 	public Object visit(ASTVarDeclStmt node, Object data) {
-		if (!((Data) data).index.isInBlock()) {
-			((Data) data).index.addFieldDefinition(node, ((Data) data).exceptions);
+		if (getIndex(data).getFrame().isInBlock()) {
+			getIndex(data).getFrame().addLocalVariableDeclaration(node, getExceptions(data));
 		}
 		return super.visit(node, data);
 	}
 
-	public static class Data {
-		public final Index index;
-		public final List<ParseException> exceptions;
+	private static Index getIndex(Object data) {
+		return ((IIndexVisitorData) data).getIndex();
+	}
 
-		public Data(Index index, List<ParseException> exceptions) {
-			this.index = index;
-			this.exceptions = exceptions;
-		}
+	private static List<ParseException> getExceptions(Object data) {
+		return ((IIndexVisitorData) data).getExceptions();
+	}
+
+	public static interface IIndexVisitorData {
+		Index getIndex();
+
+		List<ParseException> getExceptions();
 	}
 
 }

@@ -13,8 +13,8 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.earthcomputer.minefunk.parser.ASTProcessor;
 import net.earthcomputer.minefunk.parser.ASTRoot;
-import net.earthcomputer.minefunk.parser.ASTValidator;
 import net.earthcomputer.minefunk.parser.Index;
 import net.earthcomputer.minefunk.parser.MinefunkParser;
 import net.earthcomputer.minefunk.parser.ParseException;
@@ -59,12 +59,12 @@ public class Main {
 			in.close();
 			asts.add(root);
 
-			ASTValidator.preIndexCheck(root, exceptions);
+			ASTProcessor.preIndexCheck(root, exceptions);
 			if (handleExceptions(exceptions)) {
 				return;
 			}
 
-			ASTValidator.index(root, index, exceptions);
+			ASTProcessor.index(root, index, exceptions);
 			if (handleExceptions(exceptions)) {
 				return;
 			}
@@ -76,11 +76,26 @@ public class Main {
 		}
 
 		for (ASTRoot root : asts) {
-			ASTValidator.postIndexCheck(root, index, exceptions);
+			ASTProcessor.postIndexCheck(root, index, exceptions);
 			if (handleExceptions(exceptions)) {
 				return;
 			}
 		}
+
+		Map<String, List<String>> commandLists = new HashMap<>();
+		for (ASTRoot root : asts) {
+			ASTProcessor.generateCommandLists(root, index, commandLists, exceptions);
+			if (handleExceptions(exceptions)) {
+				return;
+			}
+		}
+
+		commandLists.forEach((funcId, commands) -> {
+			System.out.println(funcId);
+			commands.forEach(command -> {
+				System.out.println("  " + command);
+			});
+		});
 	}
 
 	private static boolean handleExceptions(List<ParseException> exceptions) {

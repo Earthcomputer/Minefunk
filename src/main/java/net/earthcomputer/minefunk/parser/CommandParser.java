@@ -71,10 +71,31 @@ public class CommandParser {
 				exceptions.add(e);
 				return;
 			}
-			if (index.getVariableDeclaration(type) == null) {
+			if (index.getFrame().resolveVariableReference(type) == null) {
 				exceptions.add(new ParseException("Unrecognized variable \"" + type + "\""));
 			}
 		});
+	}
+
+	public static String makeRawCommand(String command, Index index) throws ParseException {
+		StringBuilder newCommand = new StringBuilder(command);
+		List<WildcardIndex> wildcardIndices = getWildcardIndexes(command);
+		for (int i = wildcardIndices.size() - 1; i >= 0; i--) {
+			WildcardIndex wildcardIndex = wildcardIndices.get(i);
+			Type type = wildcardToType(command, wildcardIndex);
+			Object value = index.getFrame().staticEvaluateVariable(type);
+			if (value == null) {
+				System.err.println("" + index.getFrame().getNamespacesList() + type);
+				throw new ParseException("Cannot static evaluate that variable");
+			}
+			newCommand.replace(wildcardIndex.startPercent, wildcardIndex.endPercent + 1, value.toString());
+		}
+		for (int i = 0; i < newCommand.length() - 1; i++) {
+			if (newCommand.charAt(i) == '%' && newCommand.charAt(i + 1) == '%') {
+				newCommand.deleteCharAt(i);
+			}
+		}
+		return newCommand.toString();
 	}
 
 	public static class WildcardIndex {

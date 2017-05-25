@@ -1,0 +1,10 @@
+
+namespace test_mod {
+
+	void main() {
+		std::echo(true);
+		std::print("Hello World!");
+		std::removeCommandChainLimit();
+	}
+
+}

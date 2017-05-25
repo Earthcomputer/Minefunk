@@ -7,6 +7,10 @@ public class ASTUtil {
 	private ASTUtil() {
 	};
 
+	public static Node[] getChildren(ASTBlockStmt stmt) {
+		return stmt.children == null ? new Node[0] : stmt.children;
+	}
+	
 	public static String getCommand(ASTCommandStmt stmt) {
 		return (String) stmt.value;
 	}
@@ -98,6 +102,14 @@ public class ASTUtil {
 
 	public static String getName(ASTVarDeclStmt stmt) {
 		return getValue((ASTIdentifier) stmt.children[2]);
+	}
+	
+	public static Node getInitializer(ASTVarDeclStmt stmt) {
+		if (stmt.children.length <= 3) {
+			return null;
+		} else {
+			return stmt.children[3];
+		}
 	}
 
 }
