@@ -67,7 +67,7 @@ public class Frame {
 
 	public void addLocalVariableDeclaration(ASTVarDeclStmt varDecl, List<ParseException> exceptions) {
 		if (localVariablesDefined.peek().containsKey(ASTUtil.getName(varDecl))) {
-			exceptions.add(new ParseException("Duplicate local variable defined"));
+			exceptions.add(Util.createParseException("Duplicate local variable defined", ASTUtil.getNameNode(varDecl)));
 			return;
 		}
 		localVariablesDefined.peek().put(ASTUtil.getName(varDecl), varDecl);

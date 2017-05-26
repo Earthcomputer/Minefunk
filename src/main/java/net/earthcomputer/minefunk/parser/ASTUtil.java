@@ -7,28 +7,44 @@ public class ASTUtil {
 	private ASTUtil() {
 	};
 
+	public static ASTNodeValue getNodeValue(Node node) {
+		return (ASTNodeValue) ((SimpleNode) node).value;
+	}
+
 	public static Node[] getChildren(ASTBlockStmt stmt) {
 		return stmt.children == null ? new Node[0] : stmt.children;
 	}
-	
+
 	public static String getCommand(ASTCommandStmt stmt) {
-		return (String) stmt.value;
+		return (String) getNodeValue(stmt).getValue();
 	}
 
 	public static Node getExpression(ASTExpressionStmt stmt) {
 		return stmt.children[0];
 	}
 
+	public static ASTModifiers getModifiersNode(ASTFunction function) {
+		return (ASTModifiers) function.children[0];
+	}
+
 	public static int getModifiers(ASTFunction function) {
-		return getModifiers((ASTModifiers) function.children[0]);
+		return getModifiers(getModifiersNode(function));
+	}
+
+	public static ASTType getReturnTypeNode(ASTFunction function) {
+		return (ASTType) function.children[1];
 	}
 
 	public static Type getReturnType(ASTFunction function) {
-		return getType((ASTType) function.children[1]);
+		return getType(getReturnTypeNode(function));
+	}
+
+	public static ASTIdentifier getNameNode(ASTFunction function) {
+		return (ASTIdentifier) function.children[2];
 	}
 
 	public static String getName(ASTFunction function) {
-		return getValue((ASTIdentifier) function.children[2]);
+		return getValue(getNameNode(function));
 	}
 
 	public static ASTVarDeclStmt[] getParameters(ASTFunction function) {
@@ -45,7 +61,7 @@ public class ASTUtil {
 	}
 
 	public static Type getFunctionName(ASTFunctionCallExpr expr) {
-		return (Type) expr.value;
+		return (Type) getNodeValue(expr).getValue();
 	}
 
 	public static Node[] getArguments(ASTFunctionCallExpr expr) {
@@ -53,15 +69,15 @@ public class ASTUtil {
 	}
 
 	public static String getValue(ASTIdentifier id) {
-		return (String) id.value;
+		return (String) getNodeValue(id).getValue();
 	}
 
 	public static int getValue(ASTIntLiteralExpr expr) {
-		return (int) expr.value;
+		return (int) getNodeValue(expr).getValue();
 	}
 
 	public static int getModifiers(ASTModifiers modifiers) {
-		return (int) modifiers.value;
+		return (int) getNodeValue(modifiers).getValue();
 	}
 
 	public static String getName(ASTNamespace namespace) {
@@ -73,37 +89,60 @@ public class ASTUtil {
 	}
 
 	public static ASTNamespace[] getNamespaces(ASTRoot root) {
-		return (ASTNamespace[]) root.children;
+		if (root.children == null) {
+			return new ASTNamespace[0];
+		}
+		return Arrays.copyOf(root.children, root.children.length, ASTNamespace[].class);
 	}
 
 	public static String getValue(ASTStringLiteralExpr expr) {
-		return (String) expr.value;
+		return (String) getNodeValue(expr).getValue();
 	}
 
 	public static Type getType(ASTType type) {
-		return (Type) type.value;
+		return (Type) getNodeValue(type).getValue();
+	}
+
+	public static ASTIdentifier getNameNode(ASTTypeDef type) {
+		return (ASTIdentifier) type.children[0];
 	}
 
 	public static String getName(ASTTypeDef type) {
-		return getValue((ASTIdentifier) type.children[0]);
+		return getValue(getNameNode(type));
+	}
+
+	public static ASTType getVariableNode(ASTVarAccessExpr expr) {
+		return (ASTType) expr.children[0];
 	}
 
 	public static Type getVariable(ASTVarAccessExpr expr) {
-		return getType((ASTType) expr.children[0]);
+		return getType(getVariableNode(expr));
+	}
+
+	public static ASTModifiers getModifiersNode(ASTVarDeclStmt stmt) {
+		return (ASTModifiers) stmt.children[0];
 	}
 
 	public static int getModifiers(ASTVarDeclStmt stmt) {
-		return getModifiers((ASTModifiers) stmt.children[0]);
+		return getModifiers(getModifiersNode(stmt));
+	}
+
+	public static ASTType getTypeNode(ASTVarDeclStmt stmt) {
+		return (ASTType) stmt.children[1];
 	}
 
 	public static Type getType(ASTVarDeclStmt stmt) {
-		return getType((ASTType) stmt.children[1]);
+		return getType(getTypeNode(stmt));
+	}
+
+	public static ASTIdentifier getNameNode(ASTVarDeclStmt stmt) {
+		return (ASTIdentifier) stmt.children[2];
 	}
 
 	public static String getName(ASTVarDeclStmt stmt) {
-		return getValue((ASTIdentifier) stmt.children[2]);
+		return getValue(getNameNode(stmt));
 	}
-	
+
 	public static Node getInitializer(ASTVarDeclStmt stmt) {
 		if (stmt.children.length <= 3) {
 			return null;

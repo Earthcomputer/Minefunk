@@ -38,7 +38,7 @@ public class Index {
 	public void addTypeDefinition(ASTTypeDef typeDef, List<ParseException> exceptions) {
 		Type type = new Type(frames.peek().getNamespacesList(), ASTUtil.getName(typeDef));
 		if (types.containsKey(type)) {
-			exceptions.add(new ParseException("Duplicate type declared: " + type));
+			exceptions.add(Util.createParseException("Duplicate type declared: " + type, ASTUtil.getNameNode(typeDef)));
 		} else {
 			types.put(type, typeDef);
 		}
@@ -47,7 +47,8 @@ public class Index {
 	public void addFieldDefinition(ASTVarDeclStmt fieldDecl, List<ParseException> exceptions) {
 		Type field = new Type(frames.peek().getNamespacesList(), ASTUtil.getName(fieldDecl));
 		if (fields.containsKey(field)) {
-			exceptions.add(new ParseException("Duplicate field declared: " + field));
+			exceptions.add(
+					Util.createParseException("Duplicate field declared: " + field, ASTUtil.getNameNode(fieldDecl)));
 		} else {
 			fields.put(field, fieldDecl);
 			extFieldData.put(fieldDecl, new ExtFieldData(field.getNamespaces()));
@@ -62,7 +63,8 @@ public class Index {
 		}
 		FunctionId funcId = new FunctionId(new Type(frames.peek().getNamespacesList(), ASTUtil.getName(func)), params);
 		if (functionsToResolve.containsKey(funcId)) {
-			exceptions.add(new ParseException("Duplicate function declared: " + funcId));
+			exceptions.add(
+					Util.createParseException("Duplicate function declared: " + funcId, ASTUtil.getNameNode(func)));
 		} else {
 			functionsToResolve.put(funcId, func);
 		}
@@ -77,7 +79,8 @@ public class Index {
 				Type resolvedParam = getFrame().resolveType(funcId.paramTypes[i]);
 				if (resolvedParam == null) {
 					errored = true;
-					exceptions.add(new ParseException("Could not resolve " + funcId.paramTypes[i]));
+					exceptions.add(Util.createParseException("Unknown type",
+							ASTUtil.getTypeNode(ASTUtil.getParameters(func)[i])));
 				} else {
 					resolvedParams[i] = resolvedParam;
 				}

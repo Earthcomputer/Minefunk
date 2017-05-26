@@ -18,7 +18,7 @@ public class StatementParser {
 		case JJTCOMMANDSTMT:
 			String rawCommand;
 			try {
-				rawCommand = CommandParser.makeRawCommand(ASTUtil.getCommand((ASTCommandStmt) stmt), index);
+				rawCommand = CommandParser.makeRawCommand((ASTCommandStmt) stmt, index);
 			} catch (ParseException e) {
 				exceptions.add(e);
 				return;

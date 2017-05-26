@@ -9,6 +9,7 @@ options
 PARSER_BEGIN(MinefunkParser)
 package net.earthcomputer.minefunk.parser;
 import java.util.*;
+import net.earthcomputer.minefunk.*;
 
 public class MinefunkParser
 {
@@ -145,21 +146,37 @@ public ASTRoot parse() #Root :
   )*
   < EOF >
   {
+    ASTNamespace [ ] namespaces = ASTUtil.getNamespaces(jjtThis);
+    if (namespaces.length == 0)
+    {
+      jjtThis.value = new ASTNodeValue(1, 0, 1, 0);
+    }
+    else
+    {
+      ASTNodeValue firstValue = (ASTNodeValue) namespaces [ 0 ].value;
+      ASTNodeValue lastValue = (ASTNodeValue) namespaces [ namespaces.length - 1 ].value;
+      jjtThis.value = new ASTNodeValue(firstValue.getStartLine(), firstValue.getStartColumn(), lastValue.getEndLine(), lastValue.getEndColumn());
+    }
     return jjtThis;
   }
 }
 
 public void namespace() #Namespace :
 {
+  Token firstToken;
+  Token lastToken;
 }
 {
-  < NAMESPACE > 
+  firstToken = < NAMESPACE > 
   identifier() 
   < OPEN_BRACE >
   (
     member()
   )*
-  < CLOSE_BRACE >
+  lastToken = < CLOSE_BRACE >
+  {
+    jjtThis.value = new ASTNodeValue(firstToken.beginLine, firstToken.beginColumn, lastToken.endLine, lastToken.endColumn);
+  }
 }
 
 public void member() :
@@ -175,10 +192,16 @@ public void member() :
 
 public void typedef() #TypeDef :
 {
+  Token firstToken;
 }
 {
-  < TYPEDEF > 
+  firstToken = < TYPEDEF > 
   identifier()
+  < SEMICOLON >
+  {
+    ASTNodeValue lastValue = (ASTNodeValue) ASTUtil.getNameNode(jjtThis).value;
+    jjtThis.value = new ASTNodeValue(firstToken.beginLine, firstToken.beginColumn, lastValue.getEndLine(), lastValue.getEndColumn());
+  }
 }
 
 public void function() #Function :
@@ -192,6 +215,11 @@ public void function() #Function :
   paramList() 
   < CLOSE_PARENTHESIS > 
   blockStatement()
+  {
+    ASTNodeValue firstValue = (ASTNodeValue) ASTUtil.getModifiersNode(jjtThis).value;
+    ASTNodeValue lastValue = (ASTNodeValue) ASTUtil.getBody(jjtThis).value;
+    jjtThis.value = new ASTNodeValue(firstValue.getStartLine(), firstValue.getStartColumn(), lastValue.getEndLine(), lastValue.getEndColumn());
+  }
 }
 
 public void paramList() #ParamList :
@@ -199,12 +227,24 @@ public void paramList() #ParamList :
 }
 {
   (
-    varDeclStatement()
+    varDecl()
     (
       < COMMA > 
-      varDeclStatement()
+      varDecl()
     )*
   )?
+  {
+    if (jjtThis.children == null || jjtThis.children.length == 0)
+    {
+      jjtThis.value = new ASTNodeValue(1, 0, 1, 0);
+    }
+    else
+    {
+      ASTNodeValue firstValue = (ASTNodeValue) ((ASTVarDeclStmt) jjtThis.children [ 0 ]).value;
+      ASTNodeValue lastValue = (ASTNodeValue) ((ASTVarDeclStmt) jjtThis.children [ jjtThis.children.length - 1 ]).value;
+      jjtThis.value = new ASTNodeValue(firstValue.getStartLine(), firstValue.getStartColumn(), lastValue.getEndLine(), lastValue.getEndColumn());
+    }
+  }
 }
 
 public void statement() :
@@ -212,9 +252,8 @@ public void statement() :
 }
 {
   (
-    < SEMICOLON >
+    commandStatement()
   | blockStatement()
-  | commandStatement()
   |
     (
       LOOKAHEAD(varDeclStatement())
@@ -226,29 +265,44 @@ public void statement() :
 
 public void blockStatement() #BlockStmt :
 {
+  Token firstToken;
+  Token lastToken;
 }
 {
-  < OPEN_BRACE >
+  firstToken = < OPEN_BRACE >
   (
     statement()
   )*
-  < CLOSE_BRACE >
+  lastToken = < CLOSE_BRACE >
+  {
+    jjtThis.value = new ASTNodeValue(firstToken.beginLine, firstToken.beginColumn, lastToken.endLine, lastToken.endColumn);
+  }
 }
 
 public void commandStatement() #CommandStmt :
 {
   Token t;
+  Token firstToken;
+  Token lastToken;
 }
 {
-  < START_COMMAND > 
-  t = < COMMAND_BODY >
+  firstToken = < START_COMMAND > 
+  t = < COMMAND_BODY > 
+  lastToken = < END_COMMAND >
   {
-    jjtThis.value = t.image;
+    jjtThis.value = new ASTNodeValue(firstToken.beginLine, firstToken.beginColumn, lastToken.endLine, lastToken.endColumn, t.image);
   }
-  < END_COMMAND >
 }
 
-public void varDeclStatement() #VarDeclStmt :
+public void varDeclStatement() :
+{
+}
+{
+  varDecl() 
+  < SEMICOLON >
+}
+
+public void varDecl() #VarDeclStmt :
 {
 }
 {
@@ -259,13 +313,33 @@ public void varDeclStatement() #VarDeclStmt :
     < ASSIGN > 
     expression()
   )?
+  {
+    ASTNodeValue firstValue = (ASTNodeValue) ASTUtil.getModifiersNode(jjtThis).value;
+    Node initializer = ASTUtil.getInitializer(jjtThis);
+    ASTNodeValue lastValue;
+    if (initializer == null)
+    {
+      lastValue = (ASTNodeValue) ASTUtil.getNameNode(jjtThis).value;
+    }
+    else
+    {
+      lastValue = ASTUtil.getNodeValue(initializer);
+    }
+    jjtThis.value = new ASTNodeValue(firstValue.getStartLine(), firstValue.getStartColumn(), lastValue.getEndLine(), lastValue.getEndColumn());
+  }
 }
 
 public void expressionStatement() #ExpressionStmt :
 {
+  Token lastToken;
 }
 {
-  expression()
+  expression() 
+  lastToken = < SEMICOLON >
+  {
+    ASTNodeValue firstValue = (ASTNodeValue) ((SimpleNode) ASTUtil.getExpression(jjtThis)).value;
+    jjtThis.value = new ASTNodeValue(firstValue.getStartLine(), firstValue.getStartColumn(), lastToken.endLine, lastToken.endColumn);
+  }
 }
 
 public void expression() :
@@ -284,21 +358,26 @@ public void expression() :
 
 public void functionCallExpression() #FunctionCallExpr :
 {
+  Token firstToken = null;
+  Token lastToken;
   Token t;
   List < String > namespaces = new ArrayList < String > ();
+  Type value;
 }
 {
   (
     LOOKAHEAD(2)
     t = < WORD >
     {
+      if (firstToken == null) firstToken = t;
       namespaces.add(t.image);
     }
     < DOUBLE_COLON >
   )*
   t = < WORD >
   {
-    jjtThis.value = new Type(namespaces, t.image);
+    if (firstToken == null) firstToken = t;
+    value = new Type(namespaces, t.image);
   }
   < OPEN_PARENTHESIS >
   (
@@ -308,7 +387,10 @@ public void functionCallExpression() #FunctionCallExpr :
       expression()
     )*
   )?
-  < CLOSE_PARENTHESIS >
+  lastToken = < CLOSE_PARENTHESIS >
+  {
+    jjtThis.value = new ASTNodeValue(firstToken.beginLine, firstToken.beginColumn, lastToken.endLine, lastToken.endColumn, value);
+  }
 }
 
 public void variableAccessExpression() #VarAccessExpr :
@@ -316,19 +398,31 @@ public void variableAccessExpression() #VarAccessExpr :
 }
 {
   type()
+  {
+    ASTNodeValue firstValue = (ASTNodeValue) ASTUtil.getVariableNode(jjtThis).value;
+    ASTNodeValue lastValue = firstValue;
+    jjtThis.value = new ASTNodeValue(firstValue.getStartLine(), firstValue.getStartColumn(), lastValue.getEndLine(), lastValue.getEndColumn());
+  }
 }
 
 public void booleanLiteralExpression() #BoolLiteralExpr :
 {
+  Token t;
+  Boolean value;
 }
 {
-  < TRUE >
+  (
+    t = < TRUE >
+    {
+      value = Boolean.TRUE;
+    }
+  | t = < FALSE >
+    {
+      value = Boolean.FALSE;
+    }
+  )
   {
-    jjtThis.value = Boolean.TRUE;
-  }
-| < FALSE >
-  {
-    jjtThis.value = Boolean.FALSE;
+    jjtThis.value = new ASTNodeValue(t.beginLine, t.beginColumn, t.endLine, t.endColumn, value);
   }
 }
 
@@ -341,29 +435,35 @@ public void integerLiteralExpression() #IntLiteralExpr :
   {
     try
     {
-      jjtThis.value = Integer.parseInt(t.image);
+      jjtThis.value = new ASTNodeValue(t.beginLine, t.beginColumn, t.endLine, t.endColumn, Integer.parseInt(t.image));
     }
     catch (NumberFormatException e)
     {
       // Possible if > Integer.MAX_VALUE or < Integer.MIN_VALUE
-      throw new ParseException("Integer is out of bounds");
+      throw Util.createParseException("Integer is out of bounds", t);
     }
   }
 }
 
 public void stringLiteralExpression() #StringLiteralExpr :
 {
+  Token firstToken;
+  Token lastToken;
   Token t = null;
+  String value;
 }
 {
-  < STRING_START > 
+  firstToken = < STRING_START > 
   (
   t = < STRING_BODY >
   )?
   {
-    jjtThis.value = t == null ? "" : t.image;
+    value = t == null ? "" : t.image;
   }
-  < STRING_END >
+  lastToken = < STRING_END >
+  {
+    jjtThis.value = new ASTNodeValue(firstToken.beginLine, firstToken.beginColumn, lastToken.endLine, lastToken.endColumn, value);
+  }
 }
 
 public void identifier() #Identifier :
@@ -373,40 +473,56 @@ public void identifier() #Identifier :
 {
   t = < WORD >
   {
-    jjtThis.value = t.image;
+    jjtThis.value = new ASTNodeValue(t.beginLine, t.beginColumn, t.endLine, t.endColumn, t.image);
   }
 }
 
 public void modifiers() #Modifiers :
 {
+  Token firstToken = null;
+  Token lastToken = null;
   int modifiers = 0;
 }
 {
   (
-    < INLINE >
-    {
-      if ((modifiers & Modifiers.INLINE) != 0)
+    (
+      lastToken = < INLINE >
       {
-        throw new ParseException("Duplicate modifier \"inline\"");
+        if ((modifiers & Modifiers.INLINE) != 0)
+        {
+          throw Util.createParseException("Duplicate modifier \"inline\"", lastToken);
+        }
+        modifiers |= Modifiers.INLINE;
       }
-      modifiers |= Modifiers.INLINE;
-    }
-  | < CONST >
-    {
-      if ((modifiers & Modifiers.CONST) != 0)
+    | lastToken = < CONST >
       {
-        throw new ParseException("Duplicate modifier \"const\"");
+        if ((modifiers & Modifiers.CONST) != 0)
+        {
+          throw Util.createParseException("Duplicate modifier \"const\"", lastToken);
+        }
+        modifiers |= Modifiers.CONST;
       }
-      modifiers |= Modifiers.CONST;
+    )
+    {
+      if (firstToken == null) firstToken = lastToken;
     }
   )*
   {
-    jjtThis.value = modifiers;
+    if (firstToken == null)
+    {
+      jjtThis.value = new ASTNodeValue(1, 0, 1, 0, 0);
+    }
+    else
+    {
+      jjtThis.value = new ASTNodeValue(firstToken.beginLine, firstToken.beginColumn, lastToken.endLine, lastToken.endColumn, modifiers);
+    }
   }
 }
 
 public void type() #Type :
 {
+  Token firstToken = null;
+  Token lastToken;
   Token t;
   List < String > namespaces = new ArrayList < String > ();
 }
@@ -415,12 +531,16 @@ public void type() #Type :
     LOOKAHEAD(2)
     t = < WORD >
     {
+      if (firstToken == null) firstToken = t;
       namespaces.add(t.image);
     }
     < DOUBLE_COLON >
   )*
   t = < WORD >
   {
-    jjtThis.value = new Type(namespaces, t.image);
+    if (firstToken == null) firstToken = t;
+    lastToken = t;
+    Type value = new Type(namespaces, t.image);
+    jjtThis.value = new ASTNodeValue(firstToken.beginLine, firstToken.beginColumn, lastToken.endLine, lastToken.endColumn, value);
   }
 }

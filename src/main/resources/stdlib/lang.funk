@@ -1,8 +1,8 @@
 
 namespace std {
 	
-	const int MAX_INT = 2147483647
-	const int MIN_INT = -2147483648
+	const int MAX_INT = 2147483647;
+	const int MIN_INT = -2147483648;
 	
 	/**
 	 * Removes, for all intents an purposes, the maxCommandChainLength limit.

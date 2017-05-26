@@ -49,17 +49,17 @@ public class ExpressionParser {
 	public static Object staticEvaluateExpression(Node node, Index index) throws ParseException {
 		switch (node.getId()) {
 		case JJTBOOLLITERALEXPR:
-			return ((ASTBoolLiteralExpr) node).value;
+			return ASTUtil.getNodeValue(node).getValue();
 		case JJTFUNCTIONCALLEXPR:
-			throw cantStaticEvaluate();
+			throw cantStaticEvaluate(node);
 		case JJTINTLITERALEXPR:
-			return ((ASTIntLiteralExpr) node).value;
+			return ASTUtil.getNodeValue(node).getValue();
 		case JJTSTRINGLITERALEXPR:
-			return ((ASTStringLiteralExpr) node).value;
+			return ASTUtil.getNodeValue(node).getValue();
 		case JJTVARACCESSEXPR:
 			Object constValue = index.getFrame().staticEvaluateVariable(ASTUtil.getVariable((ASTVarAccessExpr) node));
 			if (constValue == null) {
-				throw cantStaticEvaluate();
+				throw cantStaticEvaluate(node);
 			} else {
 				return constValue;
 			}
@@ -117,8 +117,8 @@ public class ExpressionParser {
 		}
 	}
 
-	public static ParseException cantStaticEvaluate() {
-		return new ParseException("Can't static evaluate that expression");
+	public static ParseException cantStaticEvaluate(Node expr) {
+		return Util.createParseException("Can't static evaluate that expression", expr);
 	}
 
 }

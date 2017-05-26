@@ -3,12 +3,15 @@ package net.earthcomputer.minefunk.parser;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.earthcomputer.minefunk.Util;
+
 public class CommandParser {
 
 	private CommandParser() {
 	}
 
-	public static List<WildcardIndex> getWildcardIndexes(String command) throws ParseException {
+	public static List<WildcardIndex> getWildcardIndexes(ASTCommandStmt commandStmt) throws ParseException {
+		String command = ASTUtil.getCommand(commandStmt);
 		List<WildcardIndex> wildcardIndexes = new ArrayList<>();
 		boolean escaped = false;
 		for (int i = 0; i < command.length() - 1; i++) {
@@ -27,7 +30,7 @@ public class CommandParser {
 						}
 					}
 					if (end == -1) {
-						throw new ParseException("Unlclosed variable reference");
+						throw Util.createParseException("Unclosed variable reference", commandStmt);
 					}
 					wildcardIndexes.add(new WildcardIndex(start, end));
 				}
@@ -36,16 +39,17 @@ public class CommandParser {
 		return wildcardIndexes;
 	}
 
-	public static Type wildcardToType(String command, WildcardIndex wildcardIndex) throws ParseException {
+	public static Type wildcardToType(ASTCommandStmt commandStmt, WildcardIndex wildcardIndex) throws ParseException {
+		String command = ASTUtil.getCommand(commandStmt);
 		String wildcard = command.substring(wildcardIndex.startPercent + 1, wildcardIndex.endPercent);
 		wildcard = wildcard.trim();
 		String[] parts = wildcard.split("\\s*::\\s*");
 		if (parts.length == 0) {
-			throw new ParseException("Invalid variable reference");
+			throw createParseException("Invalid variable reference", commandStmt, wildcardIndex);
 		}
 		for (String part : parts) {
 			if (part.isEmpty()) {
-				throw new ParseException("Invalid variable reference");
+				throw createParseException("Invalid variable reference", commandStmt, wildcardIndex);
 			}
 		}
 		List<String> namespaces = new ArrayList<>();
@@ -55,10 +59,11 @@ public class CommandParser {
 		return new Type(namespaces, parts[parts.length - 1]);
 	}
 
-	public static void checkWildcardsAgainstIndex(String command, Index index, List<ParseException> exceptions) {
+	public static void checkWildcardsAgainstIndex(ASTCommandStmt commandStmt, Index index,
+			List<ParseException> exceptions) {
 		List<WildcardIndex> wildcardIndexes;
 		try {
-			wildcardIndexes = getWildcardIndexes(command);
+			wildcardIndexes = getWildcardIndexes(commandStmt);
 		} catch (ParseException e) {
 			exceptions.add(e);
 			return;
@@ -66,27 +71,28 @@ public class CommandParser {
 		wildcardIndexes.forEach(wildcardIndex -> {
 			Type type;
 			try {
-				type = wildcardToType(command, wildcardIndex);
+				type = wildcardToType(commandStmt, wildcardIndex);
 			} catch (ParseException e) {
 				exceptions.add(e);
 				return;
 			}
 			if (index.getFrame().resolveVariableReference(type) == null) {
-				exceptions.add(new ParseException("Unrecognized variable \"" + type + "\""));
+				exceptions.add(createParseException("Unrecognized variable", commandStmt, wildcardIndex));
 			}
 		});
 	}
 
-	public static String makeRawCommand(String command, Index index) throws ParseException {
+	public static String makeRawCommand(ASTCommandStmt commandStmt, Index index) throws ParseException {
+		String command = ASTUtil.getCommand(commandStmt);
 		StringBuilder newCommand = new StringBuilder(command);
-		List<WildcardIndex> wildcardIndices = getWildcardIndexes(command);
+		List<WildcardIndex> wildcardIndices = getWildcardIndexes(commandStmt);
 		for (int i = wildcardIndices.size() - 1; i >= 0; i--) {
 			WildcardIndex wildcardIndex = wildcardIndices.get(i);
-			Type type = wildcardToType(command, wildcardIndex);
+			Type type = wildcardToType(commandStmt, wildcardIndex);
 			Object value = index.getFrame().staticEvaluateVariable(type);
 			if (value == null) {
 				System.err.println("" + index.getFrame().getNamespacesList() + type);
-				throw new ParseException("Cannot static evaluate that variable");
+				throw createParseException("Cannot static evaluate that variable", commandStmt, wildcardIndex);
 			}
 			newCommand.replace(wildcardIndex.startPercent, wildcardIndex.endPercent + 1, value.toString());
 		}
@@ -96,6 +102,14 @@ public class CommandParser {
 			}
 		}
 		return newCommand.toString();
+	}
+
+	private static ParseException createParseException(String message, ASTCommandStmt commandStmt, WildcardIndex idx) {
+		ASTNodeValue value = ASTUtil.getNodeValue(commandStmt);
+		return Util.createParseException(message,
+				Util.createToken(ASTUtil.getCommand(commandStmt).substring(idx.startPercent + 1, idx.endPercent),
+						value.getStartLine(), value.getStartColumn() + 1 + idx.startPercent, value.getEndLine(),
+						value.getEndColumn() + 1 + idx.endPercent));
 	}
 
 	public static class WildcardIndex {

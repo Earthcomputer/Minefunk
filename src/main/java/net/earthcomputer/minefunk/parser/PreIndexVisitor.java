@@ -1,15 +1,21 @@
 package net.earthcomputer.minefunk.parser;
 
+import static net.earthcomputer.minefunk.parser.ASTUtil.getCommand;
+import static net.earthcomputer.minefunk.parser.ASTUtil.getExpression;
+import static net.earthcomputer.minefunk.parser.ASTUtil.getModifiers;
+import static net.earthcomputer.minefunk.parser.ASTUtil.getParameters;
+import static net.earthcomputer.minefunk.parser.ASTUtil.getReturnType;
+
 import java.util.List;
 
-import static net.earthcomputer.minefunk.parser.ASTUtil.*;
+import net.earthcomputer.minefunk.Util;
 
 public class PreIndexVisitor extends MinefunkParserDefaultVisitor implements MinefunkParserTreeConstants {
 
 	@Override
 	public Object visit(ASTCommandStmt node, Object data) {
 		if (getCommand(node).endsWith(";")) {
-			addException(data, new ParseException("Command statements should not end with a ; semicolon"));
+			addException(data, Util.createParseException("Command statements should not end with a ; semicolon", node));
 		}
 		return super.visit(node, data);
 	}
@@ -21,7 +27,8 @@ public class PreIndexVisitor extends MinefunkParserDefaultVisitor implements Min
 		case JJTFUNCTIONCALLEXPR:
 			break;
 		default:
-			addException(data, new ParseException("You cannot use that type of expression as a statement"));
+			addException(data,
+					Util.createParseException("You cannot use that type of expression as a statement", node));
 		}
 		return super.visit(node, data);
 	}
@@ -33,15 +40,18 @@ public class PreIndexVisitor extends MinefunkParserDefaultVisitor implements Min
 		int modifiers = getModifiers(node);
 		if ((modifiers & Modifiers.INLINE) == 0) {
 			if (getParameters(node).length != 0) {
-				addException(data, new ParseException("Non-inline functions with parameters are not supported yet"));
+				addException(data,
+						Util.createParseException("Non-inline functions with parameters are not supported yet", node));
 			}
 		}
 		if (!getReturnType(node).isVoid()) {
-			addException(data, new ParseException("Non-void functions are not supported yet"));
+			addException(data, Util.createParseException("Non-void functions are not supported yet",
+					ASTUtil.getReturnTypeNode(node)));
 		}
 		modifiers &= ~ALLOWED_FUNCTION_MODIFIERS;
 		if (modifiers != 0) {
-			addException(data, new ParseException("Invalid modifiers on function"));
+			addException(data,
+					Util.createParseException("Invalid modifiers on function", ASTUtil.getModifiersNode(node)));
 		}
 		return super.visit(node, data);
 	}
@@ -52,11 +62,12 @@ public class PreIndexVisitor extends MinefunkParserDefaultVisitor implements Min
 	public Object visit(ASTVarDeclStmt node, Object data) {
 		int modifiers = getModifiers(node);
 		if ((modifiers & Modifiers.CONST) == 0) {
-			addException(data, new ParseException("Non-const variables not supported yet"));
+			addException(data, Util.createParseException("Non-const variables not supported yet", node));
 		}
 		modifiers &= ~ALLOWED_VARIABLE_MODIFIERS;
 		if (modifiers != 0) {
-			addException(data, new ParseException("Invalid modifiers on function"));
+			addException(data,
+					Util.createParseException("Invalid modifiers on function", ASTUtil.getModifiersNode(node)));
 		}
 		return super.visit(node, data);
 	}
