@@ -1,14 +1,23 @@
 
+// GENERAL
 plugins {
   id "ca.coglinc.javacc" version "2.4.0"
+  id "com.jfrog.bintray" version "1.7.3"
 }
 apply plugin: 'java'
 apply plugin: 'eclipse'
+apply plugin: 'maven-publish'
 
 repositories {
 	mavenCentral()
 }
 
+group = 'net.earthcomputer.util'
+version = VERSION
+
+sourceCompatibility = 1.8
+
+// JAVACC
 sourceSets {
 	main {
 		java {
@@ -18,3 +27,29 @@ sourceSets {
 	}
 }
 eclipseClasspath.dependsOn compileJavacc
+
+// BINTRAY
+configurations {
+	normal
+}
+
+publishing {
+	publications {
+		normal(MavenPublication) {
+			artifactId = 'minefunk'
+			from components.java
+		}
+	}
+}
+
+bintray {
+	user = bintrayUser
+	key = bintrayKey
+	publish = false
+	pkg {
+		repo = 'util'
+		name = 'minefunk'
+		configurations = ['normal']
+		publications = ['normal']
+	}
+}
