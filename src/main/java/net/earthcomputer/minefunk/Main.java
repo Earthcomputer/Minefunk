@@ -37,25 +37,25 @@ public class Main {
 	 * The directory that the program is being run from
 	 */
 	private static Path workingDirectory = new File(".").getAbsoluteFile().toPath();
-
-	private static void printUsage() {
-		System.out.println("java -jar minefunk.jar <source-files>");
-	}
+	/**
+	 * The command line options
+	 */
+	private static CommandLineOptions cmdLineOptions;
 
 	public static void main(String[] args) throws IOException {
-		// If we have no args, we just print help
-		if (args.length == 0) {
-			printUsage();
+		// Parse command line options
+		cmdLineOptions = CommandLineOptions.parse(workingDirectory, args);
+		if (cmdLineOptions == null) {
+			System.err.println(CommandLineOptions.USAGE);
 			return;
 		}
 
 		// Get matching files
-		FileMatcher fileMatcher = new FileMatcher(workingDirectory, args[0]);
 		List<File> inputFiles = new ArrayList<>();
 		Files.walkFileTree(workingDirectory, new SimpleFileVisitor<Path>() {
 			@Override
 			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-				if (fileMatcher.accept(file.toFile())) {
+				if (cmdLineOptions.getInputFileMatcher().accept(file.toFile())) {
 					inputFiles.add(file.toFile());
 				}
 				return FileVisitResult.CONTINUE;
@@ -191,18 +191,18 @@ public class Main {
 		// Print a witty comment to brighten up the user's day
 		errPrintWittyComment();
 
-		errPrintDivider();
-
-		// Since the compiler is in development, we print the stack traces
-		// TODO make this a command line option
-		System.err.println("In case any of these were errors in the compiler itself,");
-		System.err.println("here are the stack traces:");
-		exceptions.forEach((filename, errorsInFile) -> {
-			errorsInFile.forEach(ex -> {
-				errPrintDivider();
-				ex.printStackTrace();
+		// Print stack traces
+		if (cmdLineOptions.showStacktrace()) {
+			errPrintDivider();
+			System.err.println("In case any of these were errors in the compiler itself,");
+			System.err.println("here are the stack traces:");
+			exceptions.forEach((filename, errorsInFile) -> {
+				errorsInFile.forEach(ex -> {
+					errPrintDivider();
+					ex.printStackTrace();
+				});
 			});
-		});
+		}
 
 		return true;
 	}
