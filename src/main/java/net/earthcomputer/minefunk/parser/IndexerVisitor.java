@@ -2,6 +2,11 @@ package net.earthcomputer.minefunk.parser;
 
 import java.util.List;
 
+/**
+ * The AST visitor which adds members to the index
+ * 
+ * @author Earthcomputer
+ */
 public class IndexerVisitor extends IndexVisitor {
 
 	@Override
@@ -33,12 +38,12 @@ public class IndexerVisitor extends IndexVisitor {
 			this.index = index;
 			this.exceptions = exceptions;
 		}
-		
+
 		@Override
 		public Index getIndex() {
 			return index;
 		}
-		
+
 		@Override
 		public List<ParseException> getExceptions() {
 			return exceptions;

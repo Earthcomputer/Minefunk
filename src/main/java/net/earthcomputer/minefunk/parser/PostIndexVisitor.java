@@ -4,6 +4,13 @@ import net.earthcomputer.minefunk.Util;
 import net.earthcomputer.minefunk.parser.Index.FunctionId;
 import net.earthcomputer.minefunk.parser.IndexerVisitor.Data;
 
+/**
+ * This is the AST visitor which performs post-index checks (things which we can
+ * only know whether they are correct once we have finished the indexing phase),
+ * such as type-checking
+ * 
+ * @author Earthcomputer
+ */
 public class PostIndexVisitor extends IndexVisitor {
 
 	@Override

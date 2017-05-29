@@ -4,6 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * The AST visitor used to generate Minecraft commands
+ * 
+ * @author Earthcomputer
+ */
 public class CommandListVisitor extends IndexVisitor {
 
 	@Override
@@ -28,12 +33,12 @@ public class CommandListVisitor extends IndexVisitor {
 			this.commandLists = commandLists;
 			this.exceptions = exceptions;
 		}
-		
+
 		@Override
 		public Index getIndex() {
 			return index;
 		}
-		
+
 		@Override
 		public List<ParseException> getExceptions() {
 			return exceptions;

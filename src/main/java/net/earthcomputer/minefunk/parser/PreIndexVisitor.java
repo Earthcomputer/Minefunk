@@ -10,6 +10,13 @@ import java.util.List;
 
 import net.earthcomputer.minefunk.Util;
 
+/**
+ * This is the AST visitor which performs pre-index checking. This includes all
+ * the checks which we do not need an index to perform, such as verifying the
+ * correct modifiers are on the correct things.
+ * 
+ * @author Earthcomputer
+ */
 public class PreIndexVisitor extends MinefunkParserDefaultVisitor implements MinefunkParserTreeConstants {
 
 	@Override
@@ -33,8 +40,6 @@ public class PreIndexVisitor extends MinefunkParserDefaultVisitor implements Min
 		return super.visit(node, data);
 	}
 
-	private static final int ALLOWED_FUNCTION_MODIFIERS = Modifiers.INLINE;
-
 	@Override
 	public Object visit(ASTFunction node, Object data) {
 		int modifiers = getModifiers(node);
@@ -48,15 +53,13 @@ public class PreIndexVisitor extends MinefunkParserDefaultVisitor implements Min
 			addException(data, Util.createParseException("Non-void functions are not supported yet",
 					ASTUtil.getReturnTypeNode(node)));
 		}
-		modifiers &= ~ALLOWED_FUNCTION_MODIFIERS;
-		if (modifiers != 0) {
+		modifiers &= ~Modifiers.ALLOWED_FUNCTION_MODIFIERS;
+		if (modifiers != Modifiers.NONE) {
 			addException(data,
 					Util.createParseException("Invalid modifiers on function", ASTUtil.getModifiersNode(node)));
 		}
 		return super.visit(node, data);
 	}
-
-	private static final int ALLOWED_VARIABLE_MODIFIERS = Modifiers.CONST;
 
 	@Override
 	public Object visit(ASTVarDeclStmt node, Object data) {
@@ -64,10 +67,11 @@ public class PreIndexVisitor extends MinefunkParserDefaultVisitor implements Min
 		if ((modifiers & Modifiers.CONST) == 0) {
 			addException(data, Util.createParseException("Non-const variables not supported yet", node));
 		}
-		modifiers &= ~ALLOWED_VARIABLE_MODIFIERS;
-		if (modifiers != 0) {
+		modifiers &= ~Modifiers.ALLOWED_VARIABLE_MODIFIERS;
+		if (modifiers != Modifiers.NONE) {
 			addException(data,
-					Util.createParseException("Invalid modifiers on function", ASTUtil.getModifiersNode(node)));
+					Util.createParseException("Invalid modifiers on function \"" + Modifiers.toString(modifiers) + "\"",
+							ASTUtil.getModifiersNode(node)));
 		}
 		return super.visit(node, data);
 	}

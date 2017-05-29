@@ -11,6 +11,12 @@ import java.util.Map;
 
 import net.earthcomputer.minefunk.Util;
 
+/**
+ * Contains the definitions of all types, fields and functions. This structure
+ * is shared globally, so contains the fully qualified names of each
+ * 
+ * @author Earthcomputer
+ */
 public class Index {
 
 	private Map<Type, ASTTypeDef> types = new HashMap<>();
@@ -35,6 +41,14 @@ public class Index {
 		types.put(Type.VOID, new VoidDef());
 	}
 
+	/**
+	 * Defines a type
+	 * 
+	 * @param typeDef
+	 *            - the type to define
+	 * @param exceptions
+	 *            - the list of compiler errors to add to
+	 */
 	public void addTypeDefinition(ASTTypeDef typeDef, List<ParseException> exceptions) {
 		Type type = new Type(frames.peek().getNamespacesList(), ASTUtil.getName(typeDef));
 		if (types.containsKey(type)) {
@@ -44,6 +58,14 @@ public class Index {
 		}
 	}
 
+	/**
+	 * Defines a field
+	 * 
+	 * @param fieldDecl
+	 *            - the field to define
+	 * @param exceptions
+	 *            - the list of compiler errors to add to
+	 */
 	public void addFieldDefinition(ASTVarDeclStmt fieldDecl, List<ParseException> exceptions) {
 		Type field = new Type(frames.peek().getNamespacesList(), ASTUtil.getName(fieldDecl));
 		if (fields.containsKey(field)) {
@@ -55,6 +77,17 @@ public class Index {
 		}
 	}
 
+	/**
+	 * Defines a function. Note that the function is not defined immediately
+	 * because the parameter types may not have been defined yet. After
+	 * indexing, {@link #resolvePendingFunctions(List)} must be called to ensure
+	 * the functions are fully defined.
+	 * 
+	 * @param func
+	 *            - the function to define
+	 * @param exceptions
+	 *            - the list of compiler errors to add to
+	 */
 	public void addFunctionDefinition(ASTFunction func, List<ParseException> exceptions) {
 		ASTVarDeclStmt[] rawParams = ASTUtil.getParameters(func);
 		Type[] params = new Type[rawParams.length];
@@ -70,9 +103,15 @@ public class Index {
 		}
 	}
 
+	/**
+	 * Actually defines the functions after everything has been indexed
+	 * 
+	 * @param exceptions
+	 *            - the list of compiler errors to add to
+	 */
 	public void resolvePendingFunctions(List<ParseException> exceptions) {
 		functionsToResolve.forEach((funcId, func) -> {
-			pushFrame(Util.listToDeque(funcId.type.getNamespaces()));
+			pushFrame(Util.listToDeque(funcId.name.getNamespaces()));
 			Type[] resolvedParams = new Type[funcId.paramTypes.length];
 			boolean errored = false;
 			for (int i = 0; i < resolvedParams.length; i++) {
@@ -86,46 +125,111 @@ public class Index {
 				}
 			}
 			if (!errored) {
-				functions.put(new FunctionId(funcId.type, resolvedParams), func);
-				extFunctionData.put(func, new ExtFunctionData(funcId.type.getNamespaces()));
+				functions.put(new FunctionId(funcId.name, resolvedParams), func);
+				extFunctionData.put(func, new ExtFunctionData(funcId.name.getNamespaces()));
 			}
 			popFrame();
 		});
 		functionsToResolve.clear();
 	}
 
+	/**
+	 * Pushes a new frame to the deque of frames
+	 * 
+	 * @param namespaces
+	 *            - the namespaces of the new frame
+	 */
 	public void pushFrame(Deque<String> namespaces) {
 		frames.push(new Frame(this, namespaces, new ArrayDeque<>()));
 	}
 
+	/**
+	 * Gets the top frame on the deque of frames
+	 * 
+	 * @return The top frame
+	 */
 	public Frame getFrame() {
 		return frames.peek();
 	}
 
+	/**
+	 * Pops the top frame from the deque of frames
+	 */
 	public void popFrame() {
 		frames.pop();
 	}
 
-	public ASTTypeDef getTypeDefintionNoContext(Type typeName) {
+	/**
+	 * Gets a type definition, given a fully qualified type name
+	 * 
+	 * @param typeName
+	 *            - the fully qualified type name
+	 * @return The type definition, or <tt>null</tt> if the type was not defined
+	 */
+	public ASTTypeDef getTypeDefinition(Type typeName) {
 		return types.get(typeName);
 	}
 
-	public ASTVarDeclStmt getFieldDefinitionNoContext(Type fieldName) {
+	/**
+	 * Gets a field definition, given a fully qualified field name
+	 * 
+	 * @param fieldName
+	 *            - the fully qualified field name
+	 * @return The field definition, or <tt>null</tt> if the field was not
+	 *         defined
+	 */
+	public ASTVarDeclStmt getFieldDefinition(Type fieldName) {
 		return fields.get(fieldName);
 	}
 
-	public ASTFunction getFunctionDefinitionNoContext(FunctionId funcId) {
+	/**
+	 * Gets a function definition, given a fully qualified function name and
+	 * parameters
+	 * 
+	 * @param funcId
+	 *            - the fully qualified function ID
+	 * @return The function definition, or <tt>null</tt> if the function was not
+	 *         resolved
+	 */
+	public ASTFunction getFunctionDefinition(FunctionId funcId) {
 		return functions.get(funcId);
 	}
 
-	public ASTFunction getFunctionDefinitionNoContext(Type type, Type... paramTypes) {
+	/**
+	 * Gets a function definition, given a fully qualified function name and
+	 * parameters
+	 * 
+	 * @param type
+	 *            - the fully qualified name
+	 * @param paramTypes
+	 *            - the fully qualified names of the parameter types
+	 * @return The function definition, or <tt>null</tt> if the function was not
+	 *         resolved
+	 */
+	public ASTFunction getFunctionDefinition(Type type, Type... paramTypes) {
 		return functions.get(new FunctionId(type, paramTypes));
 	}
 
+	/**
+	 * Returns whether the given variable declaration declares a field
+	 * 
+	 * @param varDecl
+	 *            - the variable declaration
+	 * @return Whether the given variable is a field
+	 */
 	public boolean isField(ASTVarDeclStmt varDecl) {
 		return fields.containsValue(varDecl);
 	}
 
+	/**
+	 * Gets the final function name of the given function. This should be used
+	 * instead of {@link ExtFunctionData#getId()}, as it creates a function ID
+	 * if none was assigned yet.
+	 * 
+	 * @param function
+	 *            - the function
+	 * @return The final function name of the given function
+	 */
 	public String getFunctionId(ASTFunction function) {
 		ExtFunctionData extData = extFunctionData.get(function);
 		if (extData.getId() == null) {
@@ -148,34 +252,64 @@ public class Index {
 		return extData.getId();
 	}
 
+	/**
+	 * Gets the extra field data for the given field
+	 * 
+	 * @param field
+	 *            - the field
+	 * @return The extra field data
+	 */
 	public ExtFieldData getExtFieldData(ASTVarDeclStmt field) {
 		return extFieldData.get(field);
 	}
 
+	/**
+	 * Gets the extra function data for the given function
+	 * 
+	 * @param func
+	 *            - the function
+	 * @return The extra function data
+	 */
 	public ExtFunctionData getExtFunctionData(ASTFunction func) {
 		return extFunctionData.get(func);
 	}
 
+	/**
+	 * A class which stores the name and parameter types of a function, both of
+	 * which are used to identify functions.
+	 * 
+	 * @author Earthcomputer
+	 */
 	public static class FunctionId {
-		private Type type;
+		private Type name;
 		private Type[] paramTypes;
 
-		public FunctionId(Type type, Type[] paramTypes) {
-			this.type = type;
+		public FunctionId(Type name, Type[] paramTypes) {
+			this.name = name;
 			this.paramTypes = paramTypes;
 		}
 
+		/**
+		 * Gets the function name
+		 * 
+		 * @return The function name
+		 */
 		public Type getName() {
-			return type;
+			return name;
 		}
 
-		public Type[] getParameters() {
+		/**
+		 * Gets the type names of the parameters
+		 * 
+		 * @return The parameter types
+		 */
+		public Type[] getParamTypes() {
 			return paramTypes;
 		}
 
 		@Override
 		public int hashCode() {
-			return Arrays.hashCode(paramTypes) + 31 * type.hashCode();
+			return Arrays.hashCode(paramTypes) + 31 * name.hashCode();
 		}
 
 		@Override
@@ -188,13 +322,13 @@ public class Index {
 				return false;
 			} else {
 				FunctionId funcId = (FunctionId) other;
-				return type.equals(funcId.type) && Arrays.equals(paramTypes, funcId.paramTypes);
+				return name.equals(funcId.name) && Arrays.equals(paramTypes, funcId.paramTypes);
 			}
 		}
 
 		@Override
 		public String toString() {
-			StringBuilder sb = new StringBuilder(type.toString());
+			StringBuilder sb = new StringBuilder(name.toString());
 			sb.append('(');
 			boolean first = true;
 			for (Type paramType : paramTypes) {

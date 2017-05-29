@@ -481,7 +481,7 @@ public void modifiers() #Modifiers :
 {
   Token firstToken = null;
   Token lastToken = null;
-  int modifiers = 0;
+  int modifiers = Modifiers.NONE;
 }
 {
   (

@@ -7,11 +7,25 @@ import java.util.List;
 import net.earthcomputer.minefunk.Util;
 import net.earthcomputer.minefunk.parser.Index.FunctionId;
 
+/**
+ * Utility class for performing operations on expressions
+ * 
+ * @author Earthcomputer
+ */
 public class ExpressionParser {
 
 	private ExpressionParser() {
 	}
 
+	/**
+	 * Gets the type that the given expression will evaluate to.
+	 * 
+	 * @param node
+	 *            - the expression
+	 * @param index
+	 *            - the index
+	 * @return The type that the given expression will evaluate to
+	 */
 	public static Type getExpressionType(Node node, Index index) {
 		switch (node.getId()) {
 		case JJTBOOLLITERALEXPR:
@@ -23,7 +37,7 @@ public class ExpressionParser {
 			for (int i = 0; i < arguments.length; i++) {
 				paramTypes[i] = getExpressionType(arguments[i], index);
 			}
-			ASTFunction func = index.getFunctionDefinitionNoContext(
+			ASTFunction func = index.getFunctionDefinition(
 					index.getFrame().resolveFunction(new FunctionId(ASTUtil.getFunctionName(funcCall), paramTypes)),
 					paramTypes);
 			if (func == null) {
@@ -46,6 +60,17 @@ public class ExpressionParser {
 		}
 	}
 
+	/**
+	 * Statically evaluates the given expression
+	 * 
+	 * @param node
+	 *            - the expression
+	 * @param index
+	 *            - the index
+	 * @return The result of the static evaluation
+	 * @throws ParseException
+	 *             if the expression cannot be statically evaluated
+	 */
 	public static Object staticEvaluateExpression(Node node, Index index) throws ParseException {
 		switch (node.getId()) {
 		case JJTBOOLLITERALEXPR:
@@ -68,6 +93,18 @@ public class ExpressionParser {
 		}
 	}
 
+	/**
+	 * Converts an expression to a command list
+	 * 
+	 * @param expr
+	 *            - the expression
+	 * @param index
+	 *            - the index
+	 * @param commands
+	 *            - the command list to add to
+	 * @param exceptions
+	 *            - the compiler errors to add to
+	 */
 	public static void toCommandList(Node expr, Index index, List<String> commands, List<ParseException> exceptions) {
 		switch (expr.getId()) {
 		case JJTBOOLLITERALEXPR:
@@ -79,7 +116,7 @@ public class ExpressionParser {
 			for (int i = 0; i < arguments.length; i++) {
 				paramTypes[i] = getExpressionType(arguments[i], index);
 			}
-			ASTFunction func = index.getFunctionDefinitionNoContext(
+			ASTFunction func = index.getFunctionDefinition(
 					index.getFrame().resolveFunction(new FunctionId(ASTUtil.getFunctionName(callExpr), paramTypes)),
 					paramTypes);
 			int modifiers = ASTUtil.getModifiers(func);
@@ -117,6 +154,14 @@ public class ExpressionParser {
 		}
 	}
 
+	/**
+	 * Creates a compiler error with a message saying that the given expression
+	 * cannot be statically evaluated
+	 * 
+	 * @param expr
+	 *            - the expression
+	 * @return The compiler error
+	 */
 	public static ParseException cantStaticEvaluate(Node expr) {
 		return Util.createParseException("Can't static evaluate that expression", expr);
 	}

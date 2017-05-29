@@ -26,19 +26,30 @@ import net.earthcomputer.minefunk.parser.MinefunkParserConstants;
 import net.earthcomputer.minefunk.parser.ParseException;
 import net.earthcomputer.minefunk.parser.Token;
 
+/**
+ * The main class of the compiler
+ * 
+ * @author Earthcomputer
+ */
 public class Main {
 
+	/**
+	 * The directory that the program is being run from
+	 */
 	private static Path workingDirectory = new File(".").getAbsoluteFile().toPath();
 
 	private static void printUsage() {
 		System.out.println("java -jar minefunk.jar <source-files>");
 	}
 
-	public static void main(String[] args) throws ParseException, IOException {
+	public static void main(String[] args) throws IOException {
+		// If we have no args, we just print help
 		if (args.length == 0) {
 			printUsage();
 			return;
 		}
+
+		// Get matching files
 		FileMatcher fileMatcher = new FileMatcher(workingDirectory, args[0]);
 		List<File> inputFiles = new ArrayList<>();
 		Files.walkFileTree(workingDirectory, new SimpleFileVisitor<Path>() {
@@ -62,6 +73,7 @@ public class Main {
 		Index index = new Index();
 		Map<String, List<ParseException>> exceptions = new LinkedHashMap<>();
 
+		// Parse asts from all input files
 		for (File inputFile : inputFiles) {
 			String filename = workingDirectory.relativize(inputFile.toPath()).toString();
 			exceptions.put(filename, new ArrayList<>());
@@ -81,6 +93,7 @@ public class Main {
 			return;
 		}
 
+		// Pre-index check
 		asts.forEach((filename, root) -> {
 			ASTProcessor.preIndexCheck(root, exceptions.get(filename));
 		});
@@ -88,6 +101,7 @@ public class Main {
 			return;
 		}
 
+		// Indexing
 		asts.forEach((filename, root) -> {
 			ASTProcessor.index(root, index, exceptions.get(filename));
 		});
@@ -95,12 +109,14 @@ public class Main {
 			return;
 		}
 
+		// Resolve functions after indexing
 		List<ParseException> globalExceptions = new ArrayList<>();
 		index.resolvePendingFunctions(globalExceptions);
 		if (handleExceptions("resolve functions", Collections.singletonMap("global", globalExceptions))) {
 			return;
 		}
 
+		// Post-index check
 		asts.forEach((filename, root) -> {
 			ASTProcessor.postIndexCheck(root, index, exceptions.get(filename));
 		});
@@ -108,6 +124,7 @@ public class Main {
 			return;
 		}
 
+		// Command generation
 		Map<String, List<String>> commandLists = new HashMap<>();
 		asts.forEach((filename, root) -> {
 			ASTProcessor.generateCommandLists(root, index, commandLists, exceptions.get(filename));
@@ -116,6 +133,7 @@ public class Main {
 			return;
 		}
 
+		// Output commands generated
 		commandLists.forEach((funcId, commands) -> {
 			System.out.println(funcId);
 			commands.forEach(command -> {
@@ -124,41 +142,79 @@ public class Main {
 		});
 	}
 
+	/**
+	 * Handles any compiler errors that occur in each phase
+	 * 
+	 * @param phase
+	 *            - the compilation phase to output to the user
+	 * @param exceptions
+	 *            - the map of parse exceptions that occurred for each file
+	 * @return Whether there were any compiler errors during this phase
+	 */
 	private static boolean handleExceptions(String phase, Map<String, List<ParseException>> exceptions) {
+		// Check if there were any errors at all
 		int errorCount = exceptions.values().stream().mapToInt(List::size).sum();
-		if (errorCount != 0) {
-			System.err.printf("Encountered %d errors during phase %s:\n", errorCount, phase);
-			exceptions.forEach((filename, errorsInFile) -> {
-				if (!errorsInFile.isEmpty()) {
-					List<String> fileLines;
-					try {
-						fileLines = Files.readAllLines(workingDirectory.resolve(filename));
-					} catch (IOException e) {
-						fileLines = Collections.emptyList();
-					}
-					final List<String> fileLines_f = fileLines;
-					errPrintDivider();
-					System.err.println("In file " + filename + ":");
-					errorsInFile.forEach(ex -> errOutputParseException(fileLines_f, ex));
-				}
-			});
-			errPrintDivider();
-			errPrintWittyComment();
-			errPrintDivider();
-			System.err.println("In case any of these were errors in the compiler itself,");
-			System.err.println("here are the stack traces:");
-			exceptions.forEach((filename, errorsInFile) -> {
-				errorsInFile.forEach(ex -> {
-					errPrintDivider();
-					ex.printStackTrace();
-				});
-			});
-			return true;
-		} else {
+		if (errorCount == 0) {
 			return false;
 		}
+
+		// Summarizing message
+		System.err.printf("Encountered %d errors during phase %s:\n", errorCount, phase);
+
+		// Loop through the errors in each file
+		exceptions.forEach((filename, errorsInFile) -> {
+			// If there were no errors in this file, skip it.
+			if (errorsInFile.isEmpty()) {
+				return;
+			}
+
+			// Read lines from the file so we can helpfully echo them to the
+			// user
+			List<String> fileLines;
+			try {
+				fileLines = Files.readAllLines(workingDirectory.resolve(filename));
+			} catch (IOException e) {
+				fileLines = Collections.emptyList();
+			}
+			final List<String> fileLines_f = fileLines;
+
+			errPrintDivider();
+
+			// Print the name of the file
+			System.err.println("In file " + filename + ":");
+			// Print all the errors in the file
+			errorsInFile.forEach(ex -> errOutputParseException(fileLines_f, ex));
+		});
+
+		errPrintDivider();
+
+		// Print a witty comment to brighten up the user's day
+		errPrintWittyComment();
+
+		errPrintDivider();
+
+		// Since the compiler is in development, we print the stack traces
+		// TODO make this a command line option
+		System.err.println("In case any of these were errors in the compiler itself,");
+		System.err.println("here are the stack traces:");
+		exceptions.forEach((filename, errorsInFile) -> {
+			errorsInFile.forEach(ex -> {
+				errPrintDivider();
+				ex.printStackTrace();
+			});
+		});
+
+		return true;
 	}
 
+	/**
+	 * Outputs a compiler error in a user-friendly way
+	 * 
+	 * @param fileLines
+	 *            - the lines read from the errored file
+	 * @param ex
+	 *            - the compiler error
+	 */
 	private static void errOutputParseException(List<String> fileLines, ParseException ex) {
 		if (ex.expectedTokenSequences != null) {
 			errPrintSyntaxError(fileLines, ex);
@@ -168,11 +224,24 @@ public class Main {
 		System.err.println();
 	}
 
+	/**
+	 * Outputs a syntax error in a user-friendly way
+	 * 
+	 * @param fileLines
+	 *            - the lines read from the errored file
+	 * @param ex
+	 *            - the syntax error
+	 */
 	private static void errPrintSyntaxError(List<String> fileLines, ParseException ex) {
-		Token tok = ex.currentToken.next;
-		errCopyLineFromFile(fileLines, tok.beginLine, tok.beginColumn, tok.endLine, tok.endColumn);
+		// Current token is the one that's OK, the errored token is the next one
+		Token errTok = ex.currentToken.next;
+
+		// Echo the errored token
+		errCopyLineFromFile(fileLines, errTok.beginLine, errTok.beginColumn, errTok.endLine, errTok.endColumn);
+
+		// An informative message as to why it's a syntax error
 		System.err.printf("From %d:%d to %d:%d... Token \"%s\" encountered, but was not expected in this location.\n",
-				tok.beginLine, tok.beginColumn, tok.endLine, tok.endColumn, tok.image);
+				errTok.beginLine, errTok.beginColumn, errTok.endLine, errTok.endColumn, errTok.image);
 		StringBuilder expected = new StringBuilder("\tExpected one of the following sequences instead:\n");
 		for (int[] sequence : ex.expectedTokenSequences) {
 			expected.append("\t\t|");
@@ -185,70 +254,161 @@ public class Main {
 		System.err.print(expected);
 	}
 
+	/**
+	 * Outputs a compiler error that's not a syntax error in a user-friendly way
+	 * 
+	 * @param fileLines
+	 *            - the lines read from the errored file
+	 * @param ex
+	 *            - the compiler error
+	 */
 	private static void errPrintNonSyntaxError(List<String> fileLines, ParseException ex) {
 		Token tok = ex.currentToken;
+		// Echo the errored code from the file
 		errCopyLineFromFile(fileLines, tok.beginLine, tok.beginColumn, tok.endLine, tok.endColumn);
+		// Description as to why it's an error
 		System.err.printf("From %d:%d to %d:%d... %s\n", tok.beginLine, tok.beginColumn, tok.endLine, tok.endColumn,
 				ex.getMessage());
 	}
 
+	/**
+	 * Echos a region of a file to the console and highlights it
+	 * 
+	 * @param fileLines
+	 * @param beginLine
+	 * @param beginColumn
+	 * @param endLine
+	 * @param endColumn
+	 */
 	private static void errCopyLineFromFile(List<String> fileLines, int beginLine, int beginColumn, int endLine,
 			int endColumn) {
+		// Can't echo lines that aren't there
 		if (endLine > fileLines.size()) {
 			System.err.println("[Unable to read from file]");
 			return;
 		}
 
+		/*
+		 * The following code accounts for the following situations. Errored
+		 * code is denoted as capital letters. All other characters are
+		 * non-errors.
+		 */
+		// @formatter:off
+		
+		// 1. Single character
+		// Input: hello World!
+		// Output:
+		// hello World!
+		//       ^
+		// 2. Single line
+		// Input: hello WORLD!
+		// Output:
+		// hello WORLD!
+		//       ^---^
+		// 3. Two lines
+		// Input:
+		// heLLO
+		// WORld!
+		// Output:
+		// heLLO
+		//   ^--
+		// WORld!
+		// --^
+		// 4. Many lines
+		// Input:
+		// heLL
+		// OWO
+		// RLD!
+		// Output:
+		// heLL
+		//   ^-
+		// [...]
+		// RLD!
+		// --^
+		// @formatter:on
+
+		// Always print first line
 		String line = fileLines.get(beginLine - 1);
 		System.err.println(line);
+		// Print whitespace up to the start of the error
 		for (int i = 0; i < beginColumn - 1; i++) {
 			System.err.print(Util.charToWhitespace(line.charAt(i)));
 		}
+		// If beginLine and endLine are equal, we have case 1 or 2. Otherwise,
+		// we have case 3 or 4
 		if (beginLine == endLine) {
+			// Print a ^ at the start of the error
 			System.err.print('^');
+			// Print -s between the start and end of the error
 			for (int i = beginColumn + 1; i < endColumn; i++) {
 				System.err.print('-');
 			}
+			// In case 2, print a ^ at the end of the error. If this was done in
+			// case 1, we'd have a repeat ^
 			if (beginColumn != endColumn) {
 				System.err.print('^');
 			}
 			System.err.println();
 		} else {
+			// Print a ^ at the start of the error
 			System.err.print('^');
+			// Print -s until the end of the line
 			for (int i = beginColumn + 1; i < line.length(); i++) {
 				System.err.print('-');
 			}
 			System.err.println();
+			// In case 4, we print a [...]
 			if (endLine > beginLine + 1) {
 				System.err.println("[...]");
 			}
+			// Echo the last line from the file
 			line = fileLines.get(endLine - 1);
 			System.err.println(line);
+			// Print -s until the end of the error
 			for (int i = 0; i < endColumn; i++) {
 				System.err.print('-');
 			}
+			// Print a ^ at the end of the error
 			System.err.print('^');
 			System.err.println();
 		}
 	}
 
+	/**
+	 * Prints a witty comment to brighten up the user's day
+	 */
 	private static void errPrintWittyComment() {
+		// Date-specific witty comments
 		Calendar cal = Calendar.getInstance();
+		int year = cal.get(Calendar.YEAR);
 		int month = cal.get(Calendar.MONTH);
 		int day = cal.get(Calendar.DAY_OF_MONTH);
+		int[] easter = Util.calculateEaster(year);
+
 		if (month == Calendar.DECEMBER && day == 25) {
+			// Christmas
 			System.err.println("// Apart from this, I hope Christmas is going well!");
 		} else if (month == Calendar.OCTOBER && day == 31) {
+			// Halloween
 			System.err.println("// Put a pumpkin on your head, you'd look better with it");
 		} else if (month == Calendar.JANUARY && day == 1) {
+			// New Year's Day
 			System.err.println("// GREAT way to start a year!");
 		} else if (month == Calendar.APRIL && day == 1 && cal.get(Calendar.HOUR_OF_DAY) < 12) {
+			// April Fools
 			System.err.println("// April fools!");
 		} else if (month == Calendar.FEBRUARY && day == 29) {
+			// Leap Day
 			System.err.println("// I hope this isn't your birthday. Just sayin'");
 		} else if (month == Calendar.DECEMBER && day == 18) {
+			// Earthcomputer's Birthday
 			System.err.println("// A gift for Earthcomputer's birthday");
+		} else if (month == easter[0] && day == easter[1]) {
+			// Easter
+			System.err.println("// Your Easter egg has hatched!");
 		}
+
+		// Print a random witty comment
 		String[] wittyComments = { "You're a map-maker! Make maps then, not mistakes!", "Oops!",
 				"It's not you, it's me...", "Now for the hard part: the fix...",
 				"Maybe if you just stopped making mistakes", "Man 0-1 Machine", "Okay, whatever",
@@ -259,6 +419,9 @@ public class Main {
 		System.err.println("// " + wittyComments[Math.abs((int) System.nanoTime()) % wittyComments.length]);
 	}
 
+	/**
+	 * Prints a divider (lots of -s)
+	 */
 	private static void errPrintDivider() {
 		System.err.println("--------------------------------");
 	}

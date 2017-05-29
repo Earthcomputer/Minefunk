@@ -5,11 +5,24 @@ import java.util.List;
 
 import net.earthcomputer.minefunk.Util;
 
+/**
+ * Utilities for processing the raw string inside a command statement
+ * 
+ * @author Earthcomputer
+ */
 public class CommandParser {
 
 	private CommandParser() {
 	}
 
+	/**
+	 * Gets a list of positions in the command where wildcards appear
+	 * 
+	 * @param commandStmt
+	 *            - the command statement
+	 * @return The list of positions of wildcards
+	 * @throws ParseException
+	 */
 	public static List<WildcardIndex> getWildcardIndexes(ASTCommandStmt commandStmt) throws ParseException {
 		String command = ASTUtil.getCommand(commandStmt);
 		List<WildcardIndex> wildcardIndexes = new ArrayList<>();
@@ -39,6 +52,17 @@ public class CommandParser {
 		return wildcardIndexes;
 	}
 
+	/**
+	 * Converts the wildcard at the given wildcard index to a type which may
+	 * refer to a variable
+	 * 
+	 * @param commandStmt
+	 *            - the command statement
+	 * @param wildcardIndex
+	 *            - the wildcard index
+	 * @return The type representing a variable referred to
+	 * @throws ParseException
+	 */
 	public static Type wildcardToType(ASTCommandStmt commandStmt, WildcardIndex wildcardIndex) throws ParseException {
 		String command = ASTUtil.getCommand(commandStmt);
 		String wildcard = command.substring(wildcardIndex.startPercent + 1, wildcardIndex.endPercent);
@@ -59,6 +83,17 @@ public class CommandParser {
 		return new Type(namespaces, parts[parts.length - 1]);
 	}
 
+	/**
+	 * Checks the wildcards that occur in the given command statement against
+	 * the index
+	 * 
+	 * @param commandStmt
+	 *            - the command statement
+	 * @param index
+	 *            - the index
+	 * @param exceptions
+	 *            - the list of compiler errors to add to
+	 */
 	public static void checkWildcardsAgainstIndex(ASTCommandStmt commandStmt, Index index,
 			List<ParseException> exceptions) {
 		List<WildcardIndex> wildcardIndexes;
@@ -82,6 +117,17 @@ public class CommandParser {
 		});
 	}
 
+	/**
+	 * Converts the given command statement into a raw Minecraft command by
+	 * static evaluating all the wildcards
+	 * 
+	 * @param commandStmt
+	 *            - the command statement
+	 * @param index
+	 *            - the index
+	 * @return The raw Minecraft command
+	 * @throws ParseException
+	 */
 	public static String makeRawCommand(ASTCommandStmt commandStmt, Index index) throws ParseException {
 		String command = ASTUtil.getCommand(commandStmt);
 		StringBuilder newCommand = new StringBuilder(command);
@@ -91,7 +137,6 @@ public class CommandParser {
 			Type type = wildcardToType(commandStmt, wildcardIndex);
 			Object value = index.getFrame().staticEvaluateVariable(type);
 			if (value == null) {
-				System.err.println("" + index.getFrame().getNamespacesList() + type);
 				throw createParseException("Cannot static evaluate that variable", commandStmt, wildcardIndex);
 			}
 			newCommand.replace(wildcardIndex.startPercent, wildcardIndex.endPercent + 1, value.toString());
@@ -104,6 +149,18 @@ public class CommandParser {
 		return newCommand.toString();
 	}
 
+	/**
+	 * Create a compiler error with the wildcard index as the range in the
+	 * source code
+	 * 
+	 * @param message
+	 *            - the message
+	 * @param commandStmt
+	 *            - the command statement
+	 * @param idx
+	 *            - the wildcard index
+	 * @return The parse exception
+	 */
 	private static ParseException createParseException(String message, ASTCommandStmt commandStmt, WildcardIndex idx) {
 		ASTNodeValue value = ASTUtil.getNodeValue(commandStmt);
 		return Util.createParseException(message,
@@ -112,6 +169,12 @@ public class CommandParser {
 						value.getEndColumn() + 1 + idx.endPercent));
 	}
 
+	/**
+	 * A wildcard index. Contains the index in the command string of the opening
+	 * % and the closing % of the wildcard
+	 * 
+	 * @author Earthcomputer
+	 */
 	public static class WildcardIndex {
 		public final int startPercent;
 		public final int endPercent;

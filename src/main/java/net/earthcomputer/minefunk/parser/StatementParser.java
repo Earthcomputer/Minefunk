@@ -4,8 +4,25 @@ import java.util.List;
 
 import static net.earthcomputer.minefunk.parser.MinefunkParserTreeConstants.*;
 
+/**
+ * Utility class for performing operations on statements
+ * 
+ * @author Earthcomputer
+ */
 public class StatementParser {
 
+	/**
+	 * Compiles the given statement to a raw Minecraft command list
+	 * 
+	 * @param stmt
+	 *            - the statement
+	 * @param index
+	 *            - the index
+	 * @param commands
+	 *            - the list of commands to add to
+	 * @param exceptions
+	 *            - the list of compiler errors to add to
+	 */
 	public static void toCommandList(Node stmt, Index index, List<String> commands, List<ParseException> exceptions) {
 		switch (stmt.getId()) {
 		case JJTBLOCKSTMT:

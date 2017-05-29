@@ -5,6 +5,11 @@ import java.io.FileFilter;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
 
+/**
+ * Matches files based on the input pattern
+ * 
+ * @author Earthcomputer
+ */
 public class FileMatcher implements FileFilter {
 
 	private Path directory;
