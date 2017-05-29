@@ -13,7 +13,7 @@ namespace my_mod {
   }
   
   void tick() {
-    killAll("creeper");
+    killAllInRange("creeper");
     keepAllAtOneDiamond();
   }
   
