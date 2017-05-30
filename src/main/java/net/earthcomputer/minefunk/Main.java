@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -162,8 +163,9 @@ public class Main {
 	 */
 	private static void addStdLib(Map<String, ASTRoot> asts, Map<String, List<ParseException>> exceptions) {
 		try {
-			File jarFile = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().getPath());
-			if (jarFile.isFile()) {
+			URL jarLocation = Main.class.getResource("/" + Main.class.getName().replace('.', '/') + ".class");
+			if (jarLocation.getProtocol().contains("jar")) {
+				File jarFile = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().toURI());
 				JarFile jar = new JarFile(jarFile);
 				Enumeration<JarEntry> entries = jar.entries();
 				while (entries.hasMoreElements()) {
