@@ -1,5 +1,6 @@
 package net.earthcomputer.minefunk;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -15,10 +16,12 @@ public class CommandLineOptions {
 	// @formatter:off
 	public static final String USAGE = "java -jar minefunk.jar <source-files> [options ...]\n"
 			+ "Options are:\n"
-			+ "--show-stacktace: Whether to show the stacktrace of a compiler error (debug feature)\n";
+			+ "--output: The output directory\n"
+			+ "--stacktace: Whether to show the stacktrace of a compiler error (debug feature)\n";
 	// @formatter:on
 
 	private FileMatcher inputFileMatcher;
+	private File outputDirectory;
 	private boolean showStacktrace;
 
 	private CommandLineOptions() {
@@ -54,7 +57,14 @@ public class CommandLineOptions {
 	 */
 	private static CommandLineOptions parse(Path workingDirectory, List<String> args) {
 		CommandLineOptions opts = new CommandLineOptions();
-		opts.showStacktrace = findFlag(args, "--stacktrace");
+		String opt;
+		opts.showStacktrace = findFlag(args, "--stacktrace") | findFlag(args, "-s");
+		opt = findStringOption(args, "--output", "-o");
+		if (opt == null) {
+			opts.outputDirectory = workingDirectory.toFile();
+		} else {
+			opts.outputDirectory = new File(opt);
+		}
 
 		if (args.isEmpty()) {
 			return null;
@@ -87,12 +97,52 @@ public class CommandLineOptions {
 	}
 
 	/**
+	 * Removes all occurrences of the given string option in <tt>args</tt> and
+	 * returns the value found, or <tt>null</tt> if not found
+	 * 
+	 * @param args
+	 *            - the command line arguments
+	 * @param option
+	 *            - the option to find
+	 * @param shorthand
+	 *            - the shorthand alias of the option
+	 * @return The value of the option
+	 */
+	private static String findStringOption(List<String> args, String option, String shorthand) {
+		String value = null;
+		Iterator<String> argItr = args.iterator();
+		while (argItr.hasNext()) {
+			String tmp = argItr.next();
+			if (option.equals(tmp) || shorthand.equals(tmp)) {
+				argItr.remove();
+				if (argItr.hasNext()) {
+					tmp = argItr.next();
+					if (value == null) {
+						value = tmp;
+					}
+					argItr.remove();
+				}
+			}
+		}
+		return value;
+	}
+
+	/**
 	 * Gets the input file matcher
 	 * 
 	 * @return The input file matcher
 	 */
 	public FileMatcher getInputFileMatcher() {
 		return inputFileMatcher;
+	}
+
+	/**
+	 * Gets the output directory
+	 * 
+	 * @return The output directory
+	 */
+	public File getOutputDirectory() {
+		return outputDirectory;
 	}
 
 	/**

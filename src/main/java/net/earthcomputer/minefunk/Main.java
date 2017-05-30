@@ -135,10 +135,13 @@ public class Main {
 
 		// Output commands generated
 		commandLists.forEach((funcId, commands) -> {
-			System.out.println(funcId);
-			commands.forEach(command -> {
-				System.out.println("  " + command);
-			});
+			File outputFile = new File(cmdLineOptions.getOutputDirectory(), funcId.replace(':', '/') + ".mcfunction");
+			outputFile.getParentFile().mkdirs();
+			try {
+				Files.write(outputFile.toPath(), commands, StandardOpenOption.CREATE);
+			} catch (IOException e) {
+				System.err.println("Failed to write function " + funcId + ", " + e);
+			}
 		});
 	}
 
