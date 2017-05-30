@@ -5,19 +5,24 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 import net.earthcomputer.minefunk.parser.ASTProcessor;
 import net.earthcomputer.minefunk.parser.ASTRoot;
@@ -90,6 +95,7 @@ public class Main {
 			}
 			asts.put(filename, root);
 		}
+		addStdLib(asts, exceptions);
 		if (handleExceptions("parsing", exceptions)) {
 			return;
 		}
@@ -144,6 +150,65 @@ public class Main {
 				System.err.println("Failed to write function " + funcId + ", " + e);
 			}
 		});
+	}
+
+	/**
+	 * Adds the standard library to the list of ASTs
+	 * 
+	 * @param asts
+	 *            - the list of ASTs
+	 * @param exceptions
+	 *            - the compiler errors to add to
+	 */
+	private static void addStdLib(Map<String, ASTRoot> asts, Map<String, List<ParseException>> exceptions) {
+		try {
+			File jarFile = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().getPath());
+			if (jarFile.isFile()) {
+				JarFile jar = new JarFile(jarFile);
+				Enumeration<JarEntry> entries = jar.entries();
+				while (entries.hasMoreElements()) {
+					JarEntry entry = entries.nextElement();
+					if (entry.getName().startsWith("stdlib/") && entry.getName().endsWith(".funk")) {
+						exceptions.put(entry.getName(), new ArrayList<>());
+						try {
+							asts.put(entry.getName(), new MinefunkParser(jar.getInputStream(entry)).parse());
+						} catch (ParseException e) {
+							exceptions.get(entry.getName()).add(e);
+						}
+					}
+				}
+				jar.close();
+			} else {
+				Path path = Paths.get(Main.class.getResource("/stdlib").toURI());
+				Path parent = path.getParent();
+				Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+					@Override
+					public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
+						if (!path.toString().endsWith(".funk")) {
+							return FileVisitResult.CONTINUE;
+						}
+						String filename = parent.relativize(path).toString();
+						exceptions.put(filename, new ArrayList<>());
+						try {
+							asts.put(filename, new MinefunkParser(Files.newBufferedReader(path)).parse());
+						} catch (ParseException e) {
+							exceptions.get(filename).add(e);
+						}
+						return FileVisitResult.CONTINUE;
+					}
+
+					@Override
+					public FileVisitResult visitFileFailed(Path path, IOException e) throws IOException {
+						e.printStackTrace();
+						return FileVisitResult.TERMINATE;
+					}
+				});
+			}
+		} catch (IOException | URISyntaxException e) {
+			System.err.println("Unable to read stdlib");
+			e.printStackTrace();
+			System.exit(1);
+		}
 	}
 
 	/**
