@@ -5,7 +5,7 @@ A powerful compiler for Minecraft functions.
 ### my_mod.funk:
 ```
 namespace my_mod {
-  void setup() {
+  void install() {
     std::print("Installing a test mod");
     std::echo(false);
     std::removeCommandChainLimit();
@@ -30,7 +30,7 @@ namespace my_mod {
 ```
 
 ### Compiles to:
-#### my_mod/setup.mcfunction:
+#### my_mod/install.mcfunction:
 ```
 tellraw @a Installing a test mod
 gamerule commandBlockOutput false
