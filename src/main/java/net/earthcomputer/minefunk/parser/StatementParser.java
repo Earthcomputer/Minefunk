@@ -1,8 +1,8 @@
 package net.earthcomputer.minefunk.parser;
 
-import java.util.List;
-
 import static net.earthcomputer.minefunk.parser.MinefunkParserTreeConstants.*;
+
+import java.util.List;
 
 /**
  * Utility class for performing operations on statements

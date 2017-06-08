@@ -8,7 +8,7 @@ package net.earthcomputer.minefunk.parser;
 public class VoidDef extends ASTTypeDef {
 
 	public static final VoidDef INSTANCE = new VoidDef();
-	
+
 	private VoidDef() {
 		super(MinefunkParserTreeConstants.JJTTYPEDEF);
 		value = new ASTNodeValue(0, 0, 0, 0);

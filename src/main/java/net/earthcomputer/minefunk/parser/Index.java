@@ -283,6 +283,39 @@ public class Index {
 	}
 
 	/**
+	 * Returns the type assigned to the given ID
+	 * 
+	 * @param id
+	 *            - the ID
+	 * @return The type
+	 */
+	public ASTTypeDef getTypeById(int id) {
+		return typesById.get(id);
+	}
+
+	/**
+	 * Returns the variable declaration assigned to the given variable ID
+	 * 
+	 * @param id
+	 *            - the ID
+	 * @return The variable declaration statement
+	 */
+	public ASTVarDeclStmt getVariableById(int id) {
+		return variablesById.get(id);
+	}
+
+	/**
+	 * Returns the function declaration assigned to the given function ID
+	 * 
+	 * @param id
+	 *            - the ID
+	 * @return The function declaration
+	 */
+	public ASTFunction getFunctionById(int id) {
+		return functionsById.get(id);
+	}
+
+	/**
 	 * A class which stores the name and parameter types of a function, both of
 	 * which are used to identify functions.
 	 * 

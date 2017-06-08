@@ -1,10 +1,6 @@
 package net.earthcomputer.minefunk.parser;
 
-import static net.earthcomputer.minefunk.parser.ASTUtil.getCommand;
-import static net.earthcomputer.minefunk.parser.ASTUtil.getExpression;
-import static net.earthcomputer.minefunk.parser.ASTUtil.getModifiers;
-import static net.earthcomputer.minefunk.parser.ASTUtil.getParameters;
-import static net.earthcomputer.minefunk.parser.ASTUtil.getReturnType;
+import static net.earthcomputer.minefunk.parser.ASTUtil.*;
 
 import java.util.List;
 

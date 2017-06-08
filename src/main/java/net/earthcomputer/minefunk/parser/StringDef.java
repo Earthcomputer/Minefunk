@@ -8,7 +8,7 @@ package net.earthcomputer.minefunk.parser;
 public class StringDef extends ASTTypeDef {
 
 	public static final StringDef INSTANCE = new StringDef();
-	
+
 	private StringDef() {
 		super(MinefunkParserTreeConstants.JJTTYPEDEF);
 		value = new ASTNodeValue(0, 0, 0, 0);

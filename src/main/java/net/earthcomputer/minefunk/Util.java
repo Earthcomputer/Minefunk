@@ -188,7 +188,7 @@ public class Util {
 		// (2 * e + 2 * j - k - h + m + 32) % 7
 		int r = ((e << 1) + (j << 1) - k - h + m + 32) % 7;
 		int n = (h - m + r + 90) / 25;
-		int p = (h - m + r + n + 19) & 31; // (h - m + r + n + 19) % 32
+		int p = h - m + r + n + 19 & 31; // (h - m + r + n + 19) % 32
 		return new int[] { n - 1, p };
 	}
 

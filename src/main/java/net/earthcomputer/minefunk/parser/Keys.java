@@ -7,7 +7,7 @@ import java.util.List;
  * 
  * @author Earthcomputer
  */
-@SuppressWarnings({ "unchecked", "rawtypes" })
+@SuppressWarnings({ "unchecked" })
 public class Keys {
 
 	private Keys() {
@@ -15,7 +15,7 @@ public class Keys {
 
 	public static final UserDataKey<Integer> ID = new UserDataKey<>(Integer.class);
 	public static final UserDataKey<Integer> TYPE_ID = new UserDataKey<>(Integer.class);
-	public static final UserDataKey<List<String>> NAMESPACES = (UserDataKey<List<String>>) (UserDataKey<?>) new UserDataKey<List>(
+	public static final UserDataKey<List<String>> NAMESPACES = (UserDataKey<List<String>>) (UserDataKey<?>) new UserDataKey<>(
 			List.class);
 	public static final UserDataKey<Object> CONST_VALUE = new UserDataKey<>(Object.class);
 

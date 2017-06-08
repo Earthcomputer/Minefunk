@@ -22,11 +22,13 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 import net.earthcomputer.minefunk.parser.ASTProcessor;
 import net.earthcomputer.minefunk.parser.ASTRoot;
+import net.earthcomputer.minefunk.parser.CallGraphVisitor;
 import net.earthcomputer.minefunk.parser.Index;
 import net.earthcomputer.minefunk.parser.MinefunkParser;
 import net.earthcomputer.minefunk.parser.MinefunkParserConstants;
@@ -129,6 +131,20 @@ public class Main {
 			ASTProcessor.postIndexCheck(root, index, exceptions.get(filename));
 		});
 		if (handleExceptions("post-index check", exceptions)) {
+			return;
+		}
+
+		// Check circular references
+		Map<CallGraphVisitor.CallGraphNode, Set<CallGraphVisitor.CallGraphNode>> callGraph = new HashMap<>();
+		asts.forEach((filename, root) -> {
+			ASTProcessor.addToCallGraph(callGraph, root, index, exceptions.get(filename));
+		});
+		CallGraphAnalyzer.StronglyConnectedComponentsFinder.Result<CallGraphVisitor.CallGraphNode> cycleSearchResults = new CallGraphAnalyzer.StronglyConnectedComponentsFinder<>(
+				callGraph).findStronglyConnectedComponents();
+		asts.forEach((filename, root) -> {
+			ASTProcessor.checkForCyclicReferences(cycleSearchResults, root, index, exceptions.get(filename));
+		});
+		if (handleExceptions("circular references check", exceptions)) {
 			return;
 		}
 
