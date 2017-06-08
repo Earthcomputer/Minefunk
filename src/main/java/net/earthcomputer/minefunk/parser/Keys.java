@@ -14,6 +14,7 @@ public class Keys {
 	}
 
 	public static final UserDataKey<Integer> ID = new UserDataKey<>(Integer.class);
+	public static final UserDataKey<Integer> TYPE_ID = new UserDataKey<>(Integer.class);
 	public static final UserDataKey<List<String>> NAMESPACES = (UserDataKey<List<String>>) (UserDataKey<?>) new UserDataKey<List>(
 			List.class);
 	public static final UserDataKey<Object> CONST_VALUE = new UserDataKey<>(Object.class);

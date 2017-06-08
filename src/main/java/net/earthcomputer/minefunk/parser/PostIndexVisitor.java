@@ -38,18 +38,26 @@ public class PostIndexVisitor extends IndexVisitor {
 				return data;
 			}
 		}
-		if (((Data) data).index.getFrame()
-				.resolveFunction(new FunctionId(ASTUtil.getFunctionName(node), paramTypes)) == null) {
+		Type resolvedFunctionName = ((Data) data).index.getFrame()
+				.resolveFunction(new FunctionId(ASTUtil.getFunctionName(node), paramTypes));
+		if (resolvedFunctionName == null) {
 			((Data) data).exceptions.add(Util.createParseException("Undefined function", node));
 			return data;
 		}
+		ASTFunction function = ((Data) data).index.getFunctionDefinition(resolvedFunctionName, paramTypes);
+		ASTUtil.getNodeValue(node).setUserData(Keys.ID, ASTUtil.getNodeValue(function).getUserData(Keys.ID));
 		return data;
 	}
 
 	@Override
 	public Object visit(ASTFunction node, Object data) {
-		if (((Data) data).index.getFrame().resolveType(ASTUtil.getReturnType(node)) == null) {
+		Type returnType = ((Data) data).index.getFrame().resolveType(ASTUtil.getReturnType(node));
+		if (returnType == null) {
 			((Data) data).exceptions.add(Util.createParseException("Undefined type", ASTUtil.getReturnTypeNode(node)));
+		} else {
+			ASTTypeDef returnTypeDef = ((Data) data).index.getTypeDefinition(returnType);
+			ASTUtil.getNodeValue(node).setUserData(Keys.TYPE_ID,
+					ASTUtil.getNodeValue(returnTypeDef).getUserData(Keys.ID));
 		}
 		super.visit(node, data);
 		return data;
@@ -57,16 +65,23 @@ public class PostIndexVisitor extends IndexVisitor {
 
 	@Override
 	public Object visit(ASTVarAccessExpr node, Object data) {
-		if (((Data) data).index.getFrame().resolveVariableReference(ASTUtil.getVariable(node)) == null) {
+		ASTVarDeclStmt varDecl = ((Data) data).index.getFrame().resolveVariableReference(ASTUtil.getVariable(node));
+		if (varDecl == null) {
 			((Data) data).exceptions.add(Util.createParseException("Undefined variable", node));
+		} else {
+			ASTUtil.getNodeValue(node).setUserData(Keys.ID, ASTUtil.getNodeValue(varDecl).getUserData(Keys.ID));
 		}
 		return super.visit(node, data);
 	}
 
 	@Override
 	public Object visit(ASTVarDeclStmt node, Object data) {
-		if (((Data) data).index.getFrame().resolveType(ASTUtil.getType(node)) == null) {
+		Type varType = ((Data) data).index.getFrame().resolveType(ASTUtil.getType(node));
+		if (varType == null) {
 			((Data) data).exceptions.add(Util.createParseException("Undefined type", ASTUtil.getTypeNode(node)));
+		} else {
+			ASTTypeDef typeDef = ((Data) data).index.getTypeDefinition(varType);
+			ASTUtil.getNodeValue(node).setUserData(Keys.TYPE_ID, ASTUtil.getNodeValue(typeDef).getUserData(Keys.ID));
 		}
 		return super.visit(node, data);
 	}

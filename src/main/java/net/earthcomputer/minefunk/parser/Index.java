@@ -23,6 +23,10 @@ public class Index {
 	private Map<FunctionId, ASTFunction> functions = new HashMap<>();
 	private Map<FunctionId, ASTFunction> functionsToResolve = new HashMap<>();
 	private Deque<Frame> frames = new ArrayDeque<>();
+	private Map<Integer, ASTTypeDef> typesById = new HashMap<>();
+	private Map<Integer, ASTVarDeclStmt> variablesById = new HashMap<>();
+	private Map<Integer, ASTFunction> functionsById = new HashMap<>();
+	private int nextTypeId = 0;
 	private int nextVariableId = 0;
 	private int nextFunctionId = 0;
 
@@ -33,10 +37,14 @@ public class Index {
 	}
 
 	private void addBuiltinTypes() {
-		types.put(Type.BOOL, new BoolDef());
-		types.put(Type.INT, new IntDef());
-		types.put(Type.STRING, new StringDef());
-		types.put(Type.VOID, new VoidDef());
+		types.put(Type.BOOL, BoolDef.INSTANCE);
+		types.put(Type.INT, IntDef.INSTANCE);
+		types.put(Type.STRING, StringDef.INSTANCE);
+		types.put(Type.VOID, VoidDef.INSTANCE);
+		defineTypeId(BoolDef.INSTANCE);
+		defineTypeId(IntDef.INSTANCE);
+		defineTypeId(StringDef.INSTANCE);
+		defineTypeId(VoidDef.INSTANCE);
 	}
 
 	/**
@@ -247,22 +255,31 @@ public class Index {
 
 	}
 
-	/**
-	 * Creates a new unique variable ID
-	 * 
-	 * @return The new variable ID
-	 */
-	public int nextVariableId() {
-		return nextVariableId++;
+	public void defineTypeId(ASTTypeDef typeDef) {
+		typesById.put(nextTypeId, typeDef);
+		ASTUtil.getNodeValue(typeDef).setUserData(Keys.ID, nextTypeId++);
 	}
 
 	/**
-	 * Creates a new unique function ID
+	 * Gives a variable a unique ID
 	 * 
-	 * @return The new function ID
+	 * @param variable
+	 *            - the variable to give an ID
 	 */
-	public int nextFunctionId() {
-		return nextFunctionId++;
+	public void defineVariableId(ASTVarDeclStmt variable) {
+		variablesById.put(nextVariableId, variable);
+		ASTUtil.getNodeValue(variable).setUserData(Keys.ID, nextVariableId++);
+	}
+
+	/**
+	 * Gives a function an unique ID
+	 * 
+	 * @param function
+	 *            - the function to give an ID
+	 */
+	public void defineFunctionId(ASTFunction function) {
+		functionsById.put(nextFunctionId, function);
+		ASTUtil.getNodeValue(function).setUserData(Keys.ID, nextFunctionId++);
 	}
 
 	/**

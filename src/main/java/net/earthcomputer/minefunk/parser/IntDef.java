@@ -7,8 +7,11 @@ package net.earthcomputer.minefunk.parser;
  */
 public class IntDef extends ASTTypeDef {
 
-	public IntDef() {
+	public static final IntDef INSTANCE = new IntDef();
+	
+	private IntDef() {
 		super(MinefunkParserTreeConstants.JJTTYPEDEF);
+		value = new ASTNodeValue(0, 0, 0, 0);
 	}
 
 }

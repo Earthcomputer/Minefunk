@@ -12,13 +12,14 @@ public class IndexerVisitor extends IndexVisitor {
 	@Override
 	public Object visit(ASTTypeDef node, Object data) {
 		((Data) data).index.addTypeDefinition(node, ((Data) data).exceptions);
+		((Data) data).index.defineTypeId(node);
 		return super.visit(node, data);
 	}
 
 	@Override
 	public Object visit(ASTFunction node, Object data) {
 		((Data) data).index.addFunctionDefinition(node, ((Data) data).exceptions);
-		ASTUtil.getNodeValue(node).setUserData(Keys.ID, ((Data) data).index.nextFunctionId());
+		((Data) data).index.defineFunctionId(node);
 		super.visit(node, data);
 		return data;
 	}
@@ -28,7 +29,7 @@ public class IndexerVisitor extends IndexVisitor {
 		if (!((Data) data).index.getFrame().isInBlock()) {
 			((Data) data).index.addFieldDefinition(node, ((Data) data).exceptions);
 		}
-		ASTUtil.getNodeValue(node).setUserData(Keys.ID, ((Data) data).index.nextVariableId());
+		((Data) data).index.defineVariableId(node);
 		return super.visit(node, data);
 	}
 
