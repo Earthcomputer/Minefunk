@@ -3,7 +3,6 @@ package net.earthcomputer.minefunk.parser;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
@@ -22,7 +21,6 @@ public class Frame {
 	private Index globalIndex;
 	private Deque<String> namespaces;
 	private Deque<Map<String, ASTVarDeclStmt>> localVariablesDefined;
-	private Map<ASTVarDeclStmt, ExtLocalVariableData> extLocalVariableData = new IdentityHashMap<>();
 
 	public Frame(Index globalIndex, Deque<String> namespaces,
 			Deque<Map<String, ASTVarDeclStmt>> localVariablesDefined) {
@@ -116,7 +114,7 @@ public class Frame {
 	 * Pops a block in which local variables may have been declared
 	 */
 	public void popBlock() {
-		localVariablesDefined.pop().forEach((name, decl) -> extLocalVariableData.remove(decl));
+		localVariablesDefined.pop();
 	}
 
 	/**
@@ -154,7 +152,7 @@ public class Frame {
 				}
 			}
 		}
-		extLocalVariableData.put(varDecl, new ExtLocalVariableData(constValue));
+		ASTUtil.getNodeValue(varDecl).setUserData(Keys.CONST_VALUE, constValue);
 	}
 
 	/**
@@ -166,7 +164,7 @@ public class Frame {
 	 *            - the value to change to
 	 */
 	public void setConstLocalVariableValue(ASTVarDeclStmt varDecl, Object value) {
-		extLocalVariableData.get(varDecl).setConstValue(value);
+		ASTUtil.getNodeValue(varDecl).setUserData(Keys.CONST_VALUE, value);
 	}
 
 	/**
@@ -270,11 +268,7 @@ public class Frame {
 			return null;
 		}
 		if (!globalIndex.isField(varDecl)) {
-			ExtLocalVariableData localVariableData = extLocalVariableData.get(varDecl);
-			if (localVariableData == null) {
-				return null;
-			}
-			return localVariableData.getConstValue();
+			return ASTUtil.getNodeValue(varDecl).getUserData(Keys.CONST_VALUE);
 		}
 		if ((ASTUtil.getModifiers(varDecl) & Modifiers.CONST) == 0) {
 			return null;
@@ -283,7 +277,7 @@ public class Frame {
 		if (initializer == null) {
 			return null;
 		}
-		globalIndex.pushFrame(Util.listToDeque(globalIndex.getExtFieldData(varDecl).getNamespaces()));
+		globalIndex.pushFrame(Util.listToDeque(ASTUtil.getNodeValue(varDecl).getUserData(Keys.NAMESPACES)));
 		try {
 			return ExpressionParser.staticEvaluateExpression(initializer, globalIndex);
 		} catch (ParseException e) {

@@ -1,5 +1,8 @@
 package net.earthcomputer.minefunk.parser;
 
+import java.util.IdentityHashMap;
+import java.util.Map;
+
 /**
  * The value in an AST node. All AST nodes value field must contain an instance
  * of this class. This object contains information such as the position of the
@@ -15,6 +18,7 @@ public class ASTNodeValue {
 	private int endLine;
 	private int endCol;
 	private Object value;
+	private Map<UserDataKey<?>, Object> userData = new IdentityHashMap<>();
 
 	/**
 	 * Creates an <tt>ASTNodeValue</tt> with the given range in the source code
@@ -99,6 +103,30 @@ public class ASTNodeValue {
 	 */
 	public Object getValue() {
 		return value;
+	}
+
+	/**
+	 * Sets custom data for this AST node
+	 * 
+	 * @param key
+	 *            - the key to get the custom data
+	 * @param value
+	 *            - the custom data value
+	 */
+	public <T> void setUserData(UserDataKey<T> key, T value) {
+		userData.put(key, value);
+	}
+
+	/**
+	 * Gets custom data for this AST node
+	 * 
+	 * @param key
+	 *            - the key to get the custom data
+	 * @return The value of the custom data, or <tt>null</tt> if it does not
+	 *         exist
+	 */
+	public <T> T getUserData(UserDataKey<T> key) {
+		return key.getClazz().cast(userData.get(key));
 	}
 
 }

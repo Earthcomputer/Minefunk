@@ -18,6 +18,7 @@ public class IndexerVisitor extends IndexVisitor {
 	@Override
 	public Object visit(ASTFunction node, Object data) {
 		((Data) data).index.addFunctionDefinition(node, ((Data) data).exceptions);
+		ASTUtil.getNodeValue(node).setUserData(Keys.ID, ((Data) data).index.nextFunctionId());
 		super.visit(node, data);
 		return data;
 	}
@@ -27,6 +28,7 @@ public class IndexerVisitor extends IndexVisitor {
 		if (!((Data) data).index.getFrame().isInBlock()) {
 			((Data) data).index.addFieldDefinition(node, ((Data) data).exceptions);
 		}
+		ASTUtil.getNodeValue(node).setUserData(Keys.ID, ((Data) data).index.nextVariableId());
 		return super.visit(node, data);
 	}
 

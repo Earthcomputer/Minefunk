@@ -4,7 +4,6 @@ import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -24,8 +23,7 @@ public class Index {
 	private Map<FunctionId, ASTFunction> functions = new HashMap<>();
 	private Map<FunctionId, ASTFunction> functionsToResolve = new HashMap<>();
 	private Deque<Frame> frames = new ArrayDeque<>();
-	private Map<ASTVarDeclStmt, ExtFieldData> extFieldData = new IdentityHashMap<>();
-	private Map<ASTFunction, ExtFunctionData> extFunctionData = new IdentityHashMap<>();
+	private int nextVariableId = 0;
 	private int nextFunctionId = 0;
 
 	public Index() {
@@ -73,7 +71,7 @@ public class Index {
 					Util.createParseException("Duplicate field declared: " + field, ASTUtil.getNameNode(fieldDecl)));
 		} else {
 			fields.put(field, fieldDecl);
-			extFieldData.put(fieldDecl, new ExtFieldData(field.getNamespaces()));
+			ASTUtil.getNodeValue(fieldDecl).setUserData(Keys.NAMESPACES, field.getNamespaces());
 		}
 	}
 
@@ -126,7 +124,7 @@ public class Index {
 			}
 			if (!errored) {
 				functions.put(new FunctionId(funcId.name, resolvedParams), func);
-				extFunctionData.put(func, new ExtFunctionData(funcId.name.getNamespaces()));
+				ASTUtil.getNodeValue(func).setUserData(Keys.NAMESPACES, funcId.name.getNamespaces());
 			}
 			popFrame();
 		});
@@ -231,47 +229,40 @@ public class Index {
 	 * @return The final function name of the given function
 	 */
 	public String getFunctionId(ASTFunction function) {
-		ExtFunctionData extData = extFunctionData.get(function);
-		if (extData.getId() == null) {
-			StringBuilder newName = new StringBuilder();
-			Iterator<String> nsItr = extData.getNamespaces().iterator();
-			if (nsItr.hasNext()) {
-				newName.append(nsItr.next()).append(":");
-				while (nsItr.hasNext()) {
-					newName.append(nsItr.next()).append("/");
-				}
+		StringBuilder newName = new StringBuilder();
+		Iterator<String> nsItr = ASTUtil.getNodeValue(function).getUserData(Keys.NAMESPACES).iterator();
+		if (nsItr.hasNext()) {
+			newName.append(nsItr.next()).append(":");
+			while (nsItr.hasNext()) {
+				newName.append(nsItr.next()).append("/");
 			}
-			boolean noarg = ASTUtil.getParameters(function).length == 0;
-			if (noarg) {
-				newName.append(ASTUtil.getName(function));
-			} else {
-				newName.append("0funk").append(nextFunctionId++);
-			}
-			extData.setId(newName.toString());
 		}
-		return extData.getId();
+		boolean noarg = ASTUtil.getParameters(function).length == 0;
+		if (noarg) {
+			newName.append(ASTUtil.getName(function));
+		} else {
+			newName.append("0funk").append(ASTUtil.getNodeValue(function).getUserData(Keys.ID));
+		}
+		return newName.toString();
+
 	}
 
 	/**
-	 * Gets the extra field data for the given field
+	 * Creates a new unique variable ID
 	 * 
-	 * @param field
-	 *            - the field
-	 * @return The extra field data
+	 * @return The new variable ID
 	 */
-	public ExtFieldData getExtFieldData(ASTVarDeclStmt field) {
-		return extFieldData.get(field);
+	public int nextVariableId() {
+		return nextVariableId++;
 	}
 
 	/**
-	 * Gets the extra function data for the given function
+	 * Creates a new unique function ID
 	 * 
-	 * @param func
-	 *            - the function
-	 * @return The extra function data
+	 * @return The new function ID
 	 */
-	public ExtFunctionData getExtFunctionData(ASTFunction func) {
-		return extFunctionData.get(func);
+	public int nextFunctionId() {
+		return nextFunctionId++;
 	}
 
 	/**

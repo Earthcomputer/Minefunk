@@ -44,7 +44,7 @@ public class ExpressionParser {
 				// Possible if not validated yet
 				return null;
 			}
-			index.pushFrame(Util.listToDeque(index.getExtFunctionData(func).getNamespaces()));
+			index.pushFrame(Util.listToDeque(ASTUtil.getNodeValue(func).getUserData(Keys.NAMESPACES)));
 			Type resolvedType = index.getFrame().resolveType(ASTUtil.getReturnType(func));
 			index.popFrame();
 			return resolvedType;
@@ -130,7 +130,7 @@ public class ExpressionParser {
 						continue;
 					}
 				}
-				index.pushFrame(Util.listToDeque(index.getExtFunctionData(func).getNamespaces()));
+				index.pushFrame(Util.listToDeque(ASTUtil.getNodeValue(func).getUserData(Keys.NAMESPACES)));
 				index.getFrame().pushBlock();
 				for (int i = 0; i < parameters.length; i++) {
 					index.getFrame().addLocalVariableDeclaration(parameters[i], exceptions);
