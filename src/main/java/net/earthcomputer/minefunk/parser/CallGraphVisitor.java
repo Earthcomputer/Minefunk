@@ -35,6 +35,25 @@ public class CallGraphVisitor extends IndexVisitor {
 	}
 
 	@Override
+	public Object visit(ASTCommandStmt node, Object data) {
+		try {
+			CommandParser.getWildcardIndexes(node).forEach(wildcardIndex -> {
+				try {
+					Type type = CommandParser.wildcardToType(node, wildcardIndex);
+					ASTVarDeclStmt varRef = ((Data) data).index.getFrame().resolveVariableReference(type);
+					((Data) data).callGraph.get(currentNodeStack.peek()).add(new CallGraphNode(
+							ASTUtil.getNodeValue(varRef).getUserData(Keys.ID), CallGraphNode.EnumType.VARIABLE));
+				} catch (ParseException e) {
+					throw new Error(e);
+				}
+			});
+		} catch (ParseException e) {
+			throw new Error(e);
+		}
+		return super.visit(node, data);
+	}
+
+	@Override
 	public Object visit(ASTFunction node, Object data) {
 		currentNodeStack.push(
 				new CallGraphNode(ASTUtil.getNodeValue(node).getUserData(Keys.ID), CallGraphNode.EnumType.FUNCTION));
