@@ -18,5 +18,6 @@ public class Keys {
 	public static final UserDataKey<List<String>> NAMESPACES = (UserDataKey<List<String>>) (UserDataKey<?>) new UserDataKey<>(
 			List.class);
 	public static final UserDataKey<Object> CONST_VALUE = new UserDataKey<>(Object.class);
+	public static final UserDataKey<Boolean> REFERENCED = new UserDataKey<>(Boolean.class);
 
 }

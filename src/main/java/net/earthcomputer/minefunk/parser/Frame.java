@@ -141,18 +141,6 @@ public class Frame {
 			return;
 		}
 		localVariablesDefined.peek().put(ASTUtil.getName(varDecl), varDecl);
-		Object constValue = null;
-		if ((ASTUtil.getModifiers(varDecl) & Modifiers.CONST) != 0) {
-			Node initializer = ASTUtil.getInitializer(varDecl);
-			if (initializer != null) {
-				try {
-					constValue = ExpressionParser.staticEvaluateExpression(initializer, globalIndex);
-				} catch (ParseException e) {
-					// Stays as null
-				}
-			}
-		}
-		ASTUtil.getNodeValue(varDecl).setUserData(Keys.CONST_VALUE, constValue);
 	}
 
 	/**

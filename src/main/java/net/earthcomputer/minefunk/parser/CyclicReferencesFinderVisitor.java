@@ -30,6 +30,21 @@ public class CyclicReferencesFinderVisitor extends MinefunkParserDefaultVisitor 
 		if (((Data) data).cycleSearchResults.isConnectedComponent(new CallGraphVisitor.CallGraphNode(
 				ASTUtil.getNodeValue(node).getUserData(Keys.ID), CallGraphVisitor.CallGraphNode.EnumType.VARIABLE))) {
 			((Data) data).exceptions.add(cycRefFound(node));
+		} else {
+			if (ASTUtil.getNodeValue(node).getUserData(Keys.REFERENCED)) {
+				Object constValue = null;
+				if ((ASTUtil.getModifiers(node) & Modifiers.CONST) != 0) {
+					Node initializer = ASTUtil.getInitializer(node);
+					if (initializer != null) {
+						try {
+							constValue = ExpressionParser.staticEvaluateExpression(initializer, ((Data) data).index);
+						} catch (ParseException e) {
+							// Stays as null
+						}
+					}
+				}
+				ASTUtil.getNodeValue(node).setUserData(Keys.CONST_VALUE, constValue);
+			}
 		}
 		return super.visit(node, data);
 	}

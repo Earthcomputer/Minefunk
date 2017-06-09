@@ -68,7 +68,9 @@ public class CallGraphAnalyzer {
 			onStack.add(vertex);
 
 			graph.get(vertex).forEach(nextVertex -> {
-				if (!indexes.containsKey(nextVertex)) {
+				if (nextVertex.equals(vertex)) {
+					result.singleNodeCycles.add(vertex);
+				} else if (!indexes.containsKey(nextVertex)) {
 					strongConnect(nextVertex);
 					int nextVertexLowlink = lowlinks.get(nextVertex);
 					if (nextVertexLowlink < lowlinks.get(vertex)) {
@@ -104,6 +106,7 @@ public class CallGraphAnalyzer {
 		 *            - the type of a call graph node
 		 */
 		public static class Result<T> {
+			private Set<T> singleNodeCycles = new HashSet<>();
 			private Map<T, Set<T>> groups = new HashMap<>();
 
 			private Result() {
@@ -114,7 +117,7 @@ public class CallGraphAnalyzer {
 			}
 
 			public boolean isConnectedComponent(T node) {
-				return groups.get(node).size() > 1;
+				return groups.get(node).size() > 1 || singleNodeCycles.contains(node);
 			}
 
 			public Set<Set<T>> getConnectedGroups() {

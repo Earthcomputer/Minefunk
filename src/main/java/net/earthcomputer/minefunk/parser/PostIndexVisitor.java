@@ -45,6 +45,7 @@ public class PostIndexVisitor extends IndexVisitor {
 			return data;
 		}
 		ASTFunction function = ((Data) data).index.getFunctionDefinition(resolvedFunctionName, paramTypes);
+		ASTUtil.getNodeValue(function).setUserData(Keys.REFERENCED, true);
 		ASTUtil.getNodeValue(node).setUserData(Keys.ID, ASTUtil.getNodeValue(function).getUserData(Keys.ID));
 		return data;
 	}
@@ -70,6 +71,7 @@ public class PostIndexVisitor extends IndexVisitor {
 			((Data) data).exceptions.add(Util.createParseException("Undefined variable", node));
 		} else {
 			ASTUtil.getNodeValue(node).setUserData(Keys.ID, ASTUtil.getNodeValue(varDecl).getUserData(Keys.ID));
+			ASTUtil.getNodeValue(varDecl).setUserData(Keys.REFERENCED, true);
 		}
 		return super.visit(node, data);
 	}

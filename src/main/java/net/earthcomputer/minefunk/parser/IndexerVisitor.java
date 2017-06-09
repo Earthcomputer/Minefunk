@@ -20,6 +20,7 @@ public class IndexerVisitor extends IndexVisitor {
 	public Object visit(ASTFunction node, Object data) {
 		((Data) data).index.addFunctionDefinition(node, ((Data) data).exceptions);
 		((Data) data).index.defineFunctionId(node);
+		ASTUtil.getNodeValue(node).setUserData(Keys.REFERENCED, false);
 		super.visit(node, data);
 		return data;
 	}
@@ -30,6 +31,7 @@ public class IndexerVisitor extends IndexVisitor {
 			((Data) data).index.addFieldDefinition(node, ((Data) data).exceptions);
 		}
 		((Data) data).index.defineVariableId(node);
+		ASTUtil.getNodeValue(node).setUserData(Keys.REFERENCED, false);
 		return super.visit(node, data);
 	}
 
