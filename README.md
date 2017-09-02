@@ -1,6 +1,9 @@
 # Minefunk
 A powerful compiler for Minecraft functions.
 
+## What's happened to this project?
+With 1.13 on its way, a version where pretty much every command has changed, I thought it would make a good opportunity to redesign some features of Minefunk, and perhaps make better use of some of the upcoming features with the new execute command. A complete rewrite is on its way.
+
 ## Example
 ### my_mod.funk:
 ```
